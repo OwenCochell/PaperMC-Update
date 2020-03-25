@@ -12,8 +12,9 @@ RPM:
 
 Or:
 
-DEBIAN:
+Debian:
 >apt install python 3.7
+
 (Or use whatever packet manager is installed on your system)
 ## MacOS:
 
@@ -48,24 +49,34 @@ This command will do the following:
 The following command line options are available:
 
 >-v [VERSION], --version [VERSION]
+
 Sets the default value for the version to install, defaults to latest.
 >-b [BUILD], --build [BUILD]
+
 Sets the default value for the build to install, defaults to latest.
 >-iv [VERSION]
+
 Sets the currently installed server version, ignores config data.
 >-ib [BUILD]
+
 Sets the currently installed server build, ignores config data.
 >-C, --cleanup
+
 Deletes the config directory and all data within.
 >-c, --check-only
+
 Checks for an update, does not install.
 >-nc, --no-check
+
 Does not check for an update, skips to install.
 >-i, --interactive
+
 Prompts the user for the version they would like to install.
 >-nlc, --no-load-config
+
 Will not load configuration data
 >-ndc, --no-dump-config
+
 Will not dump configuration data
 
 # Examples:
