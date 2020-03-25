@@ -32,6 +32,7 @@ More information on installing/configuring python can be found [Here](https://ww
 You may run the command like so:
 
 > python server_update.py [PATH]
+
 Where [PATH] is the path to your paperclip.jar file. More info on the paperclip.jar format can be found [Here](https://paper.readthedocs.io/en/latest/about/structure.html#id2). If a new file is downloaded, it will be installed to this path under the same name.
 
 This command will do the following:
