@@ -43,7 +43,7 @@ This command will do the following:
 4. The selected version is downloaded to a temporary directory located somewhere on your computer(This directory is generated using the python tempfile module, meaning that it will be generated in a safe, unobtrusive manner, and will be automatically removed at termination of the script).
 5. The currently installed version of the server is backed up to the temporary directory, and deleted. The newly downloaded server is moved from the temporary directory to the path of the old server, and will retain the name of the old server(If an error occurs for any reason during the instillation procedure, then the script will attempt to recover your backed up version of the old server from the temporary directory).
 6. Dumps the current configuration data into the config directory(Created if it does not exsist already). This saves the currently installed version and build, so it can be automatically checked at a later execution of the script.
-7. (Optional) - Deletes the config directory and all data within it. Will only occur is the user issues the '--cleanup' argument.
+7. (Optional) - Deletes the config directory and all data within it. Will only occur only if the user issues the '--cleanup' argument.
 
 # Command Line Options:
 
