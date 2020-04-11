@@ -340,7 +340,7 @@ class FileUtil:
 
         self.path = path  # Path to file being updated
         self.temp = None  # Tempdir instance
-        self._working_path = os.path.dirname(__file__) + '/server_update'  # Working directory path
+        self._working_path = os.path.join(os.path.dirname(__file__), 'server_update')  # Working directory path
 
     def create_temp_dir(self):
 
