@@ -79,6 +79,10 @@ Will not load configuration data
 >-ndc, --no-dump-config
 
 Will not dump configuration data
+  
+>-p [COMMAND], --post-update-command [COMMAND]
+
+Will excute this command once the update is completed, defaults to None.
 
 # Examples:
 
