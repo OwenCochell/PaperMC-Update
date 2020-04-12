@@ -37,7 +37,7 @@ Where [PATH] is the path to your paperclip.jar file. More info on the paperclip.
 
 This command will do the following:
 
-1. Attempt to load configuration data from the config directory(~/.server_update). The configuration data contains the currently installed server version and build. If no configuration data is found, and version info is not supplied via the command line, then the version and build for the currently installed server will default to 0.
+1. Attempt to load configuration data from the config directory (defaults to `/DIR_OF_YOUR_SERVER_JAR_FILE/server_update`. You may also specify this, see options below). The configuration data contains the currently installed server version and build. If no configuration data is found, and version info is not supplied via the command line, then the version and build for the currently installed server will default to 0.
 2. Check for a new version/build using the [PaperMC download API](https://paper.readthedocs.io/en/latest/site/api.html#downloads-api).
 3. If a new version/build is available, the default version and build(usually the latest) will be installed. Alternatively, the user can be prompted to manually select which version/build they want to be installed(Will occur if the '--interactive' flag is passed).
 4. The selected version is downloaded to a temporary directory located somewhere on your computer(This directory is generated using the python tempfile module, meaning that it will be generated in a safe, unobtrusive manner, and will be automatically removed at termination of the script).
@@ -84,6 +84,10 @@ Will not dump configuration data
 
 Will excute this command once the update is completed, defaults to None.
 
+>--config [PATH]
+
+Specify which config directory should be used, defaults to `/DIR_OF_YOUR_SERVER_JAR_FILE/server_update`.
+
 # Examples:
 
 Automatically check and download the latest version of the server:
@@ -91,6 +95,9 @@ Automatically check and download the latest version of the server:
 
 Download and install the latest build of version 1.13.2, without checking:
 >python server_update.py --no-check --version 1.13.2 [PATH]
+
+Download and install latest version, using data from a specific config directory:
+>python server_update.py --config '/custom/config/here/' [PATH]
 
 Install latest version, regardless of server version:
 >python server_update.py --no-load-config  --no-check [PATH]
