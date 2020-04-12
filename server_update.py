@@ -1052,9 +1052,9 @@ if __name__ == '__main__':
 
         # Allowed to install/Can install
 
-        result = serv.get_new(default_version=args.version, default_build=args.build)
+        is_update_succeed = serv.get_new(default_version=args.version, default_build=args.build)
 
-        if result and args.post_update_command is not None:
+        if is_update_succeed and args.post_update_command is not None:
             print("Executing post update command...")
             os.system(args.post_update_command)
 
