@@ -92,6 +92,9 @@ Automatically check and download the latest version of the server:
 Download and install the latest build of version 1.13.2, without checking:
 >python server_update.py --no-check --version 1.13.2 [PATH]
 
+Download and install latest version, using data from a specific config directory:
+>python server_update.py --config '/custom/config/here/' [PATH]
+
 Install latest version, regardless of server version:
 >python server_update.py --no-load-config  --no-check [PATH]
 
