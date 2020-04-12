@@ -336,12 +336,15 @@ class FileUtil:
     Class for managing the creating/deleting/moving of server files
     """
 
-    def __init__(self, path):
+    def __init__(self, path, working_dir=None):
 
         self.path = path  # Path to file being updated
         self.temp = None  # Tempdir instance
-        self._working_path = os.path.join(os.path.expanduser("~"), '.server_update')  # Working directory path
-
+        if working_dir is None:
+            self._working_path = os.path.join(os.path.dirname(self.path), 'server_update') 
+        else:
+            self._working_path = working_dir.rstrip(os.path.sep)
+        
     def create_temp_dir(self):
 
         """
@@ -646,10 +649,10 @@ class ServerUpdater:
     Class that binds all server updater classes together
     """
 
-    def __init__(self, path, version=None, build=None, config=True, prompt=True):
+    def __init__(self, path, version=None, build=None, config=True, prompt=True, working_dir=None):
 
         self.version = version  # Version of minecraft server we are running
-        self.fileutil = FileUtil(path)  # Fileutility instance
+        self.fileutil = FileUtil(path, working_dir)  # Fileutility instance
         self.buildnum = build  # Buildnum of the current server
         self._available_versions = []  # List of available versions
         self.prompt = prompt  # Weather to prompt the user for version selection
@@ -1029,11 +1032,12 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--interactive', help='Prompts the user for the version they would like to install.', action='store_true')
     parser.add_argument('-nlc', '--no-load-config', help='Will not load config information', action='store_false')
     parser.add_argument('-ndc', '--no-dump-config', help="Will not dump configuration information.", action='store_false')
+    parser.add_argument('--config', help="Specify which config directory should be used", default='NONE')
 
     args = parser.parse_args()
 
     serv = ServerUpdater(args.path, config=args.no_load_config, prompt=args.interactive,
-                         version=args.iv, build=args.ib)
+                         version=args.iv, build=args.ib, working_dir=args.config)
 
     update_available = True
 
