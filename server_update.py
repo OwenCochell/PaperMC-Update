@@ -340,7 +340,10 @@ class FileUtil:
 
         self.path = path  # Path to file being updated
         self.temp = None  # Tempdir instance
-        self._working_path = os.path.join(os.path.dirname(self.path), 'server_update') if working_dir is None else working_dir
+        if working_dir is None:
+            self._working_path = os.path.join(os.path.dirname(self.path), 'server_update') 
+        else:
+            self._working_path = working_dir.rstrip(os.path.sep)
         
     def create_temp_dir(self):
 
@@ -1034,7 +1037,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     serv = ServerUpdater(args.path, config=args.no_load_config, prompt=args.interactive,
-                         version=args.iv, build=args.ib, working_dir=args.config.rstrip(os.path.sep))
+                         version=args.iv, build=args.ib, working_dir=args.config)
 
     update_available = True
 
