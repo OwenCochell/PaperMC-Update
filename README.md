@@ -82,7 +82,7 @@ Will not dump configuration data
 
 >--config [PATH]
 
-Specify which config directory should be used, defaults to latest.
+Specify which config directory should be used, defaults to `/DIR_OF_YOUR_SERVER_JAR_FILE/server_update`.
 
 # Examples:
 
