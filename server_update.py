@@ -8,6 +8,7 @@ import sys
 from math import ceil
 import traceback
 import argparse
+import subprocess
 
 """
 A Set of tools to automate the server update process.
@@ -1060,7 +1061,7 @@ if __name__ == '__main__':
 
         if is_update_succeed and args.post_update_command is not None:
             print("Executing post update command...")
-            os.system(args.post_update_command)
+            subprocess.call(args.post_update_command, shell=True)
 
 
     # Checking if we can dump current configuration:
