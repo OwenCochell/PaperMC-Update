@@ -1,3 +1,4 @@
+# INITIAL COMMIT
 # PaperMC-Update
 A simple CLI script for automating the checking, downloading, and installing of PaperMC server updates.
 NOTE: This script can only be used for updating a [PaperMC Minecraft Server](https://papermc.io/). I highly recommend their implementation, as it is incredibly fast, supports multiple plugin formats, and is highly customisable. Consider changing if any of that sounds good to you. You can find the PaperMC documentation [Here](https://paper.readthedocs.io/en/latest/), and you can find their github page [Here](https://github.com/PaperMC).
