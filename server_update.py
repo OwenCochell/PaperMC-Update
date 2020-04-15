@@ -1032,7 +1032,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--interactive', help='Prompts the user for the version they would like to install.', action='store_true')
     parser.add_argument('-nlc', '--no-load-config', help='Will not load config information', action='store_false')
     parser.add_argument('-ndc', '--no-dump-config', help="Will not dump configuration information.", action='store_false')
-    parser.add_argument('--config', help="Specify which config directory should be used", default='NONE')
+    parser.add_argument('--config', help="Specify which config directory should be used", default=None)
 
     args = parser.parse_args()
 
