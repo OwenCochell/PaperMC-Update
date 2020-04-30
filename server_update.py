@@ -21,7 +21,7 @@ def error_report(exc, net=False):
     """
     Function for displaying error information to the terminal
     :param exc: Exception object
-    :param net: Weather to include network information
+    :param net: Whether to include network information
     :return:
     """
 
@@ -137,7 +137,7 @@ class Update:
 
         """
         Gets file from Paper API, and displays a progress bar
-        Write to the file specified in chunks, as to not fill up or memory
+        Write to the file specified in chunks, as to not fill up the memory
         :param version: Version to download
         :param build_num: Build to download
         :param path: Path to file to write to
@@ -336,15 +336,12 @@ class FileUtil:
     Class for managing the creating/deleting/moving of server files
     """
 
-    def __init__(self, path, working_dir=None):
+    def __init__(self, path):
 
         self.path = path  # Path to file being updated
         self.temp = None  # Tempdir instance
-        if working_dir is None:
-            self._working_path = os.path.join(os.path.dirname(self.path), 'server_update') 
-        else:
-            self._working_path = working_dir.rstrip(os.path.sep)
-        
+        self.version = 'version_history.json'  # Name of paper version file
+
     def create_temp_dir(self):
 
         """
@@ -365,104 +362,84 @@ class FileUtil:
 
         self.temp.close()
 
-    def create_working_dir(self):
-
-        """
-        Creates working directory in the users home folder
-        Checks if one exists already.
-        :return:
-        """
-
-        # Checking if working directory exists
-
-        if not os.path.isdir(self._working_path):
-
-            # Creating directory
-
-            os.mkdir(self._working_path, 0o755)
-
-        return
-
-    def cleanup_working_dir(self):
-
-        """
-        Cleanup and removes the current working directory
-        :return:
-        """
-
-        # Checking if directory exists:
-
-        print("# Cleaning working directory...")
-
-        if os.path.isdir(self._working_path):
-
-            # Removing directory
-
-            shutil.rmtree(self._working_path)
-
-        print("# Done cleaning working directory!")
-
-        return
-
     def load_config(self):
 
         """
-        Loads configuration info from config file
-        :return:
+        Loads configuration info from 'version.json' in the server directory
+        We only load version info if it's in the official format!
         """
 
-        print("# Loading configuration data...")
+        config = os.path.join(os.path.dirname(self.path), self.version)
 
-        if os.path.isfile(os.path.join(self._working_path, 'config.json')):
+        print("# Checking configuration file at [{}] ...".format(config))
 
-            # File exists, read data from it
+        if os.path.isfile(config):
 
-            file = open(os.path.join(self._working_path, 'config.json'), 'r')
+            # Exists and is file, read it
 
-            config = json.loads(file.read())
+            print("# Loading configuration data ...")
 
-            file.close()
+            try:
 
-            print("# Done loading configuration data!")
+                file = open(config, 'r')
 
-            return config['version'], config['build']
+                data = json.load(file)
 
-        # Could not find config file, return default vals
+            except Exception as e:
 
-        print("# Could not find configuration file.")
+                # Failed to load config data - not in JSON format
 
-        return '0', 0
+                print("# Failed to load config data - Not in JSON format!")
 
-    def dump_config(self, version, build):
+                return '0', 0
 
-        """
-        Dumps configuration data to file
-        :param version: Version server is on
-        :param build: Build server is on
-        :return:
-        """
+            # Read the data, and attempt to pull some info out of it
 
-        print("# Dumping configuration data...")
+            current = data['currentVersion']
 
-        if not os.path.isdir(self._working_path):
+            if type(current) != str:
 
-            print("# Creating working directory[{}]".format(self._working_path))
+                # We only accept strings:
 
-            # Directory does not exist, creating
+                print("# Failed to load config data - We want strings, not {}!".format(type(current)))
 
-            self.create_working_dir()
+                return '0', 0
 
-            print("# Done creating working directory!")
+            # Catch any exceptions due to weird format conventions:
 
-        config = open(os.path.join(self._working_path, 'config.json'), 'w')
+            try:
 
-        config.write(json.dumps({'version': version, 'build': build}))
+                # Splitting the data in two so we can pull some content out:
 
-        config.close()
+                build, version = current.split(" ", 1)
 
-        print("# Done dumping configuration data!")
+                # Getting build information:
 
-        return
+                build = int(build.split("-")[-1])
+
+                # Getting version information:
+
+                version = version[5:-1]
+
+            except Exception as e:
+
+                # Weird file content. Unable to get info.
+
+                print("# Unable to load config data - Invalid Format, we support official builds only!")
+
+                return '0', 0
+
+            # Returning version information:
+
+            print("# Done loading configuration data! ")
+
+            return version, build
+
+        else:
+
+            print("# Unable to load config data from file at [{}] - Not found/Not a file!".format(config))
+
+            return '0', 0
 
     def _fail_install(self, point):
 
@@ -474,7 +451,7 @@ class FileUtil:
 
         print("\n+==================================================+")
         print("> !ATTENTION! <")
-        print("A error occurred during the instillation, and we can not continue.")
+        print("An error occurred during the instillation, and we can not continue.")
         print("We will attempt to recover your previous instillation(If applicable)")
         print("Fail point: {}".format(point))
         print("Detailed error info below:")
@@ -588,7 +565,8 @@ class FileUtil:
         print("A failure has occurred during the instillation process.")
         print("I'm sure you can see the error information above.")
         print("This script will attempt to recover your old instillation.")
-        print("If this operation fails, check the github page for more info: https://github.com/Owen-Cochell/PaperMC-Update")
+        print("If this operation fails, check the github page for more info: "
+              "https://github.com/Owen-Cochell/PaperMC-Update")
 
         # Deleting file in root directory:
 
@@ -649,13 +627,13 @@ class ServerUpdater:
     Class that binds all server updater classes together
     """
 
-    def __init__(self, path, version=None, build=None, config=True, prompt=True, working_dir=None):
+    def __init__(self, path, version=None, build=None, config=True, prompt=True):
 
         self.version = version  # Version of minecraft server we are running
-        self.fileutil = FileUtil(path, working_dir)  # Fileutility instance
+        self.fileutil = FileUtil(path)  # Fileutility instance
         self.buildnum = build  # Buildnum of the current server
         self._available_versions = []  # List of available versions
-        self.prompt = prompt  # Weather to prompt the user for version selection
+        self.prompt = prompt  # Whether to prompt the user for version selection
 
         # Starting object
 
@@ -670,20 +648,23 @@ class ServerUpdater:
         :return:
         """
 
-        if config and self.version == 'NONE' and self.buildnum == 'NONE':
+        temp_version = '0'
+        temp_build = 0
+
+        if config:
 
             # Allowed to use configuration file
 
-            self.version, self.buildnum = self.fileutil.load_config()
+            temp_version, temp_build = self.fileutil.load_config()
 
         else:
 
-            # Setting true default values
+            # Skipping config file
 
-            print("# Skipping configuration file")
+            print("# Skipping configuration file!")
 
-            self.version = (self.version if self.version != 'NONE' else '0')
-            self.buildnum = (self.buildnum if self.buildnum != 'NONE' else 0)
+        self.version = (self.version if self.version != '0' else temp_version)
+        self.buildnum = (self.buildnum if self.buildnum != 0 else temp_build)
 
         print("\nServer Version Information:")
         print("  > Version: [{}]".format(self.version))
@@ -766,7 +747,6 @@ class ServerUpdater:
             # User wants default value:
 
             val = default
-
 
         if val == 'latest':
 
@@ -1007,37 +987,42 @@ if __name__ == '__main__':
     # Ran as script
 
     print("+==========================================================================+")
-    print("""|     _____                              __  __          __      __        |  
+    print('''|     _____                              __  __          __      __        |  
 |    / ___/___  ______   _____  _____   / / / /___  ____/ /___ _/ /____    |
-|    \__ \/ _ \/ ___/ | / / _ \/ ___/  / / / / __ \/ __  / __ `/ __/ _ \\   |
+|    \__ \/ _ \/ ___/ | / / _ \/ ___/  / / / / __ \/ __  / __ `/ __/ _ \   |
 |   ___/ /  __/ /   | |/ /  __/ /     / /_/ / /_/ / /_/ / /_/ / /_/  __/   |
 |  /____/\___/_/    |___/\___/_/      \____/ .___/\__,_/\__,_/\__/\___/    |
-|                                         /_/                              |""")
+|                                         /_/                              |''')
     print("+==========================================================================+")
-    print("\n[Minecraft Server Updater]")
+    print("\n[PaperMC Server Updater]")
     print("[Handles the checking, downloading, and instillation of server versions]")
     print("[Written by: Owen Cochell]\n")
 
     parser = argparse.ArgumentParser(description='Minecraft Server Updater.',
-                                     epilog="Please check the github page for more info: https://github.com/Owen-Cochell/PaperMC-Update.")
+                                     epilog="Please check the github page for more info: "
+                                            "https://github.com/Owen-Cochell/PaperMC-Update.")
 
     parser.add_argument('path', help='Path to file to be updated')
     parser.add_argument('-v', '--version', help='Server version to install(Sets default value)', default='latest')
     parser.add_argument('-b', '--build', help='Server build to install(Sets default value)',  default='latest')
-    parser.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='NONE')
-    parser.add_argument('-ib', help='Sets the currently installed server build, ignores config.', default='NONE')
-    parser.add_argument('-C', '--cleanup', help='Deletes config directory and all sub-files', action='store_true')
+    parser.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0')
+    parser.add_argument('-ib', help='Sets the currently installed server build, ignores config.', default=0)
     parser.add_argument('-c', '--check-only', help='Checks for an update, does not install', action='store_true')
     parser.add_argument('-nc', '--no-check', help='Does not check for an update, skips to install', action='store_true')
-    parser.add_argument('-i', '--interactive', help='Prompts the user for the version they would like to install.', action='store_true')
-    parser.add_argument('-nlc', '--no-load-config', help='Will not load config information', action='store_false')
-    parser.add_argument('-ndc', '--no-dump-config', help="Will not dump configuration information.", action='store_false')
-    parser.add_argument('--config', help="Specify which config directory should be used", default=None)
+    parser.add_argument('-i', '--interactive', help='Prompts the user for the version they would like to install.',
+                        action='store_true')
+    parser.add_argument('-nlc', '--no-load-config', help='Will not load Paper version config.', action='store_false')
+
+    # Deprecated arguments - Included for compatibility, but do nothing
+
+    parser.add_argument('-ndc', '--no-dump-config', help=argparse.SUPPRESS, action='store_false')
+    parser.add_argument('--config', help=argparse.SUPPRESS, default=None)
+    parser.add_argument('-C', '--cleanup', help=argparse.SUPPRESS, action='store_true')
 
     args = parser.parse_args()
 
     serv = ServerUpdater(args.path, config=args.no_load_config, prompt=args.interactive,
-                         version=args.iv, build=args.ib, working_dir=args.config)
+                         version=args.iv, build=args.ib)
 
     update_available = True
 
@@ -1056,19 +1041,3 @@ if __name__ == '__main__':
         # Allowed to install/Can install
 
         serv.get_new(default_version=args.version, default_build=args.build)
-
-    # Checking if we can dump current configuration:
-
-    if args.no_dump_config and not args.check_only:
-
-        # We can dump our configuration data
-
-        serv.fileutil.dump_config(serv.version, serv.buildnum)
-
-    # Checking if we have to clean up:
-
-    if args.cleanup:
-
-        # Cleaning up
-
-        serv.fileutil.cleanup_working_dir()
