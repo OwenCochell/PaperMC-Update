@@ -1016,7 +1016,7 @@ if __name__ == '__main__':
     # Deprecated arguments - Included for compatibility, but do nothing
 
     parser.add_argument('-ndc', '--no-dump-config', help=argparse.SUPPRESS, action='store_false')
-    parser.add_argument('--config', help=argparse.SUPPRESS, default='NONE')
+    parser.add_argument('--config', help=argparse.SUPPRESS, default=None)
     parser.add_argument('-C', '--cleanup', help=argparse.SUPPRESS, action='store_true')
 
     args = parser.parse_args()
