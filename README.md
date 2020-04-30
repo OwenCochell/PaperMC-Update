@@ -169,6 +169,11 @@ so be warned.
 This script provides a simple method to check/download/install PaperMC server updates. You can add your command to the beginning of your start file, to ensure that you are always running the latest server version. 
 If you are hosting a server for a friend/customer, you can use this script to manage the updating process for them, so they don't have to.
 
+# Special Thanks
+
+[devStorm](https://github.com/developStorm) - Helped with configuration file management, and offered valuable insight
+into the paper versioning file.
+
 # Issues/Bugs
 
 If you have any questions on usage, or you have found a bug, please open a github issue. I would be happy to help!
@@ -179,5 +184,5 @@ If you are reporting a bug/error, be sure to include the following:
 2. All arguments used
 3. Version/build you are trying to install
 4. Version/build of the currently installed server(If you know it).
-5. Fail point
+5. Fail point(If provided, should be for most cases)
 6. Stack trace/error name(If provided, should be for most cases) 
