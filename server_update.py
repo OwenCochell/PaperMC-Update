@@ -702,7 +702,7 @@ class ServerUpdater:
 
             return True
 
-        print("> No new version available.")
+        print("# No new version available.")
 
         # Checking builds
 
@@ -716,7 +716,7 @@ class ServerUpdater:
 
             return False
 
-        if build[0] != self.buildnum:
+        if build[0] != str(self.buildnum):
 
             # New build available!
 
@@ -725,7 +725,7 @@ class ServerUpdater:
 
             return True
 
-        print("# No new versions found.")
+        print("# No new builds found.")
         print("[ --== Version check complete! ==-- ]\n")
 
         return False
@@ -1016,7 +1016,7 @@ if __name__ == '__main__':
     # Deprecated arguments - Included for compatibility, but do nothing
 
     parser.add_argument('-ndc', '--no-dump-config', help=argparse.SUPPRESS, action='store_false')
-    parser.add_argument('--config', help=argparse.SUPPRESS, default=None)
+    parser.add_argument('--config', help=argparse.SUPPRESS, default='NONE')
     parser.add_argument('-C', '--cleanup', help=argparse.SUPPRESS, action='store_true')
 
     args = parser.parse_args()

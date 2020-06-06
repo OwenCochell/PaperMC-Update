@@ -47,7 +47,8 @@ This command will do the following:
 2. Check for a new version/build using the [PaperMC download API](https://paper.readthedocs.io/en/latest/site/api.html#downloads-api).
 3. If a new version/build is available, the default version and build(usually the latest) will be installed. Alternatively, the user can be prompted to manually select which version/build they want to be installed. You can use the `--interactive` flag for this.
 4. The selected version is downloaded to a temporary directory located somewhere on your computer(This directory is generated using the python tempfile module, meaning that it will be generated in a safe, unobtrusive manner, and will be automatically removed at termination of the script).
-5. The currently installed version of the server is backed up to the temporary directory, and deleted. The newly downloaded server is moved from the temporary directory to the path of the old server, and will retain the name of the old server(If an error occurs for any reason during the instillation procedure, then the script will attempt to recover your backed up version of the old server from the temporary directory).
+5. The currently installed version of the server is backed up to the temporary directory, and deleted. 
+6. The newly downloaded server is moved from the temporary directory to the path of the old server, and will retain the name of the old server(If an error occurs for any reason during the instillation procedure, then the script will attempt to recover your backed up version of the old server from the temporary directory).
 
 This is the default operation of this script. However, you can fine tune the update process using the command line options
 listed below.
