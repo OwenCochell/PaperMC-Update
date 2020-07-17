@@ -16,6 +16,20 @@ Error philosophy:
  """
 
 
+def output(text):
+
+    """
+    Outputs text to the terminal via print,
+    will not print content if we are in quiet mode.
+    """
+
+    if not args.quiet:
+
+        # We are not quieted, print the content
+
+        print(text)
+
+
 def error_report(exc, net=False):
 
     """
@@ -38,12 +52,12 @@ def error_report(exc, net=False):
 
     print("Full Traceback:")
     traceback.print_exc()
-    print("+==================================================+")
 
     if net:
 
         # Include extra network information
 
+        print("+==================================================+")
         print("Extra Network Information:")
 
         if hasattr(exc, 'reason'):
@@ -59,8 +73,6 @@ def error_report(exc, net=False):
     print("+==================================================+")
     print("(Can you make anything of this?)")
     print("Please check the github page for more info: https://github.com/Owen-Cochell/PaperMC-Update.")
-
-    input("Press enter to continue...")
 
     return
 
@@ -109,14 +121,18 @@ class Update:
 
             # Rendering progress bar:
 
-            sys.stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
-                                                       (i*step if i < total - 1 else end), end))
-            sys.stdout.flush()
+            if not args.quiet:
+
+                sys.stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
+                                                           (i*step if i < total - 1 else end), end))
+                sys.stdout.flush()
 
         # Writing newline, to continue execution
 
-        sys.stdout.write("\n")
-        sys.stdout.flush()
+        if not args.quiet:
+
+            sys.stdout.write("\n")
+            sys.stdout.flush()
 
     def _url_report(self, point):
 
@@ -144,13 +160,13 @@ class Update:
         :return: True on success, False on Failure
         """
 
-        print("\n[ --== Starting Download: ==-- ]")
+        output("\n[ --== Starting Download: ==-- ]")
 
         # Building URL here:
 
         url = self._base + '/' + str(version) + '/' + str(build_num) + '/download'
 
-        print("URL: {}".format(url))
+        output("URL: {}".format(url))
 
         # Creating request here:
 
@@ -177,7 +193,7 @@ class Update:
         length = int(data.getheader('content-length'))
         blocksize = 4608
 
-        print("Download Size: {}".format(length))
+        output("Download Size: {}".format(length))
 
         file = open(path, mode='ba')
 
@@ -225,7 +241,7 @@ class Update:
 
         # Done downloading
 
-        print("[ --== Download Complete! ==-- ]")
+        output("[ --== Download Complete! ==-- ]")
 
         return True
 
@@ -285,7 +301,7 @@ class Update:
 
         # Getting raw data and converting it to JSON format
 
-        print("  > Fetching and decoding version info...")
+        output("  > Fetching and decoding version info...")
 
         data = self._get()
 
@@ -299,7 +315,7 @@ class Update:
 
         # Returning version info
 
-        print("  > Done fetching version information!")
+        output("  > Done fetching version information!")
 
         return data['versions']
 
@@ -313,7 +329,7 @@ class Update:
 
         # Getting raw data and converting it to JSON format
 
-        print("  > Fetching and decoding build info...")
+        output("  > Fetching and decoding build info...")
 
         data = self._get(version=version)
 
@@ -325,7 +341,7 @@ class Update:
 
         data = json.loads(data.read())
 
-        print("  > Done fetching build info!")
+        output("  > Done fetching build info!")
 
         return data['builds']['all']
 
@@ -336,11 +352,11 @@ class FileUtil:
     Class for managing the creating/deleting/moving of server files
     """
 
-    def __init__(self, path):
+    def __init__(self, path, config=None):
 
         self.path = path  # Path to file being updated
         self.temp = None  # Tempdir instance
-        self.version = 'version_history.json'  # Name of paper version file
+        self.config_default = 'version_history.json'  # Default name of paper versioning file
 
     def create_temp_dir(self):
 
@@ -362,22 +378,22 @@ class FileUtil:
 
         self.temp.close()
 
-    def load_config(self):
+    def load_config(self, config):
 
         """
         Loads configuration info from 'version.json' in the server directory
         We only load version info if it's in the official format!
         """
 
-        config = os.path.join(os.path.dirname(self.path), self.version)
+        config = (config if config is not None else os.path.join(os.path.dirname(self.path), self.config_default))
 
-        print("# Checking configuration file at [{}] ...".format(config))
+        output("# Checking configuration file at [{}] ...".format(config))
 
         if os.path.isfile(config):
 
             # Exists and is file, read it
 
-            print("# Loading configuration data ...")
+            output("# Loading configuration data ...")
 
             try:
 
@@ -431,7 +447,7 @@ class FileUtil:
 
             # Returning version information:
 
-            print("# Done loading configuration data! ")
+            output("# Done loading configuration data! ")
 
             return version, build
 
@@ -465,11 +481,11 @@ class FileUtil:
         :return:
         """
 
-        print("\n[ --== Instillation: ==-- ]")
+        output("\n[ --== Instillation: ==-- ]")
 
         # Creating backup of old file:
 
-        print("# Creating backup of previous installation...")
+        output("# Creating backup of previous installation...")
 
         try:
 
@@ -487,11 +503,11 @@ class FileUtil:
 
             return False
 
-        print("# Backup created at: {}".format(os.path.join(self.temp.name, 'backup')))
+        output("# Backup created at: {}".format(os.path.join(self.temp.name, 'backup')))
 
         # Removing current file:
 
-        print("# Deleting current file at {}...".format(self.path))
+        output("# Deleting current file at {}...".format(self.path))
 
         try:
 
@@ -511,15 +527,15 @@ class FileUtil:
 
             return False
 
-        print("# Removed original file!")
+        output("# Removed original file!")
 
         # Copying downloaded file to root:
 
         try:
 
-            print("# Copying download data to root directory...")
-            print("# ({} > {})".format(os.path.join(self.temp.name, 'download_data'),
-                                       self.path))
+            output("# Copying download data to root directory...")
+            output("# ({} > {})".format(os.path.join(self.temp.name, 'download_data'),
+                                        self.path))
 
             shutil.copyfile(os.path.join(self.temp.name, 'download_data'), self.path)
 
@@ -539,17 +555,17 @@ class FileUtil:
 
             return False
 
-        print("# Done copying download data to root directory!")
+        output("# Done copying download data to root directory!")
 
         # Cleaning up temporary directory:
 
-        print("# Cleaning up temporary directory...")
+        output("# Cleaning up temporary directory...")
 
         self.temp.cleanup()
 
-        print("# Done cleaning temporary directory!")
+        output("# Done cleaning temporary directory!")
 
-        print("[ --== Instillation complete! ==-- ]")
+        output("[ --== Instillation complete! ==-- ]")
 
         return True
 
@@ -627,13 +643,14 @@ class ServerUpdater:
     Class that binds all server updater classes together
     """
 
-    def __init__(self, path, version=None, build=None, config=True, prompt=True):
+    def __init__(self, path, config_file=None, version=None, build=None, config=True, prompt=True):
 
         self.version = version  # Version of minecraft server we are running
         self.fileutil = FileUtil(path)  # Fileutility instance
         self.buildnum = build  # Buildnum of the current server
         self._available_versions = []  # List of available versions
         self.prompt = prompt  # Whether to prompt the user for version selection
+        self.config_file = config_file  # Name of the config file we pull version info from
 
         # Starting object
 
@@ -655,20 +672,20 @@ class ServerUpdater:
 
             # Allowed to use configuration file
 
-            temp_version, temp_build = self.fileutil.load_config()
+            temp_version, temp_build = self.fileutil.load_config(self.config_file)
 
         else:
 
             # Skipping config file
 
-            print("# Skipping configuration file!")
+            output("# Skipping configuration file!")
 
         self.version = (self.version if self.version != '0' else temp_version)
         self.buildnum = (self.buildnum if self.buildnum != 0 else temp_build)
 
-        print("\nServer Version Information:")
-        print("  > Version: [{}]".format(self.version))
-        print("  > Build: [{}]".format(self.buildnum))
+        output("\nServer Version Information:")
+        output("  > Version: [{}]".format(self.version))
+        output("  > Build: [{}]".format(self.buildnum))
 
         return
 
@@ -679,11 +696,11 @@ class ServerUpdater:
         :return: True is new version, False if not/error
         """
 
-        print("\n[ --== Checking For New Version: ==-- ]")
+        output("\n[ --== Checking For New Version: ==-- ]")
 
         # Checking for new server version
 
-        print("# Comparing local <> remote server versions...")
+        output("# Comparing local <> remote server versions...")
 
         ver = self.update.get_versions()
 
@@ -697,16 +714,16 @@ class ServerUpdater:
 
             # New version available!
 
-            print("# New Version available! - [Version: {}]".format(ver[0]))
-            print("[ --== Version check complete! ==-- ]\n")
+            output("# New Version available! - [Version: {}]".format(ver[0]))
+            output("[ --== Version check complete! ==-- ]\n")
 
             return True
 
-        print("# No new version available.")
+        output("# No new version available.")
 
         # Checking builds
 
-        print("# Comparing local <> remote builds...")
+        output("# Comparing local <> remote builds...")
 
         build = self.update.get_buildnums(self.version)
 
@@ -720,13 +737,13 @@ class ServerUpdater:
 
             # New build available!
 
-            print("# New build available! - [Build: {}]".format(build[0]))
-            print("[ --== Version check complete! ==-- ]\n")
+            output("# New build available! - [Build: {}]".format(build[0]))
+            output("[ --== Version check complete! ==-- ]\n")
 
             return True
 
-        print("# No new builds found.")
-        print("[ --== Version check complete! ==-- ]\n")
+        output("# No new builds found.")
+        output("[ --== Version check complete! ==-- ]\n")
 
         return False
 
@@ -752,7 +769,7 @@ class ServerUpdater:
 
             # User wants latest
 
-            print("# Selecting latest {} - [{}]...".format(name, self._available_versions[0]))
+            output("# Selecting latest {} - [{}]...".format(name, self._available_versions[0]))
 
             val = choice[0]
 
@@ -762,13 +779,13 @@ class ServerUpdater:
 
             # User selected invalid option
 
-            print("\n# Error: Invalid {} selected!".format(name))
+            output("\n# Error: Invalid {} selected!".format(name))
 
             return False, ''
 
         # Option selected is valid. Continue
 
-        print("# Selecting {}: [{}]...".format(name, val))
+        output("# Selecting {}: [{}]...".format(name, val))
 
         return True, val
 
@@ -785,13 +802,13 @@ class ServerUpdater:
 
         # Checking if we have version information:
 
-        print("# Checking version information...")
+        output("# Checking version information...")
 
         if not self._available_versions:
 
             # Version information is empty, reloading
 
-            print("# Loading version information...")
+            output("# Loading version information...")
 
             data = self.update.get_versions()
 
@@ -848,7 +865,7 @@ class ServerUpdater:
 
         # Getting build info
 
-        print("# Loading build information...")
+        output("# Loading build information...")
 
         nums = self.update.get_buildnums(ver)
 
@@ -897,15 +914,15 @@ class ServerUpdater:
 
                 # Invalid build selected!
 
-                print("# Aborting instillation!")
+                output("# Aborting instillation!")
 
                 return None, None
 
-        print("\nYou have selected:")
-        print("   > Version: [{}]".format(ver))
-        print("   > Build: [{}]".format(build))
+        output("\nYou have selected:")
+        output("   > Version: [{}]".format(ver))
+        output("   > Build: [{}]".format(build))
 
-        print("\n[ --== Version Selection Complete! ==-- ]")
+        output("\n[ --== Version Selection Complete! ==-- ]")
 
         return ver, build
 
@@ -938,17 +955,17 @@ class ServerUpdater:
             if inp in ['n', 'no']:
                 # User does not want to continue, exit
 
-                print("Canceling instillation...")
+                output("Canceling instillation...")
 
                 return
 
         # Creating temporary directory to store assets:
 
-        print("# Creating temporary directory...")
+        output("# Creating temporary directory...")
 
         self.fileutil.create_temp_dir()
 
-        print("# Temporary directory created at: {}".format(self.fileutil.temp.name))
+        output("# Temporary directory created at: {}".format(self.fileutil.temp.name))
 
         # Starting download process:
 
@@ -972,7 +989,7 @@ class ServerUpdater:
 
             return
 
-        print("\nUpdate complete!")
+        output("\nUpdate complete!")
 
         # Updating values
 
@@ -986,32 +1003,24 @@ if __name__ == '__main__':
 
     # Ran as script
 
-    print("+==========================================================================+")
-    print('''|     _____                              __  __          __      __        |  
-|    / ___/___  ______   _____  _____   / / / /___  ____/ /___ _/ /____    |
-|    \__ \/ _ \/ ___/ | / / _ \/ ___/  / / / / __ \/ __  / __ `/ __/ _ \   |
-|   ___/ /  __/ /   | |/ /  __/ /     / /_/ / /_/ / /_/ / /_/ / /_/  __/   |
-|  /____/\___/_/    |___/\___/_/      \____/ .___/\__,_/\__,_/\__/\___/    |
-|                                         /_/                              |''')
-    print("+==========================================================================+")
-    print("\n[PaperMC Server Updater]")
-    print("[Handles the checking, downloading, and instillation of server versions]")
-    print("[Written by: Owen Cochell]\n")
-
-    parser = argparse.ArgumentParser(description='Minecraft Server Updater.',
+    parser = argparse.ArgumentParser(description='PaperMC Server Updater.',
                                      epilog="Please check the github page for more info: "
                                             "https://github.com/Owen-Cochell/PaperMC-Update.")
 
     parser.add_argument('path', help='Path to file to be updated')
     parser.add_argument('-v', '--version', help='Server version to install(Sets default value)', default='latest')
-    parser.add_argument('-b', '--build', help='Server build to install(Sets default value)',  default='latest')
+    parser.add_argument('-b', '--build', help='Server build to install(Sets default value)', default='latest')
     parser.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0')
-    parser.add_argument('-ib', help='Sets the currently installed server build, ignores config.', default=0)
+    parser.add_argument('-ib', help='Sets the currently installed server build, ignores config', default=0)
     parser.add_argument('-c', '--check-only', help='Checks for an update, does not install', action='store_true')
     parser.add_argument('-nc', '--no-check', help='Does not check for an update, skips to install', action='store_true')
-    parser.add_argument('-i', '--interactive', help='Prompts the user for the version they would like to install.',
+    parser.add_argument('-i', '--interactive', help='Prompts the user for the version they would like to install',
                         action='store_true')
     parser.add_argument('-nlc', '--no-load-config', help='Will not load Paper version config.', action='store_false')
+    parser.add_argument('-cf', '--config-file', help='Path to Paper configuration file to read from'
+                                                     '(Defaults to [SERVER_JAR_DIR]/version_history.json)')
+    parser.add_argument('-q', '--quiet', help="Will only output errors and interactive questions to the terminal",
+                        action='store_true')
 
     # Deprecated arguments - Included for compatibility, but do nothing
 
@@ -1021,7 +1030,19 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    serv = ServerUpdater(args.path, config=args.no_load_config, prompt=args.interactive,
+    output("+==========================================================================+")
+    output(r'''|     _____                              __  __          __      __        |  
+|    / ___/___  ______   _____  _____   / / / /___  ____/ /___ _/ /____    |
+|    \__ \/ _ \/ ___/ | / / _ \/ ___/  / / / / __ \/ __  / __ `/ __/ _ \   |
+|   ___/ /  __/ /   | |/ /  __/ /     / /_/ / /_/ / /_/ / /_/ / /_/  __/   |
+|  /____/\___/_/    |___/\___/_/      \____/ .___/\__,_/\__,_/\__/\___/    |
+|                                         /_/                              |''')
+    output("+==========================================================================+")
+    output("\n[PaperMC Server Updater]")
+    output("[Handles the checking, downloading, and instillation of server versions]")
+    output("[Written by: Owen Cochell]\n")
+
+    serv = ServerUpdater(args.path, config_file=args.config_file, config=args.no_load_config, prompt=args.interactive,
                          version=args.iv, build=args.ib)
 
     update_available = True

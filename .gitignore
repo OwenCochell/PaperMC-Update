@@ -19,3 +19,8 @@ venv.bak/
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Pyinstaller Files
+build/
+dist/
+*.spec

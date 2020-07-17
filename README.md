@@ -43,12 +43,22 @@ it will be installed to this path under the same name.
 
 This command will do the following:
 
-1. Attempt to load current paper version/build(`/PATH_TO_SERVER_JAR/version_history.json`. This script only supports official builds of the paper server, meaning that we may fail to read config information for un-official builds). If no configuration data is found, and version info is not supplied via the command line, then the version and build for the currently installed server will default to 0.
-2. Check for a new version/build using the [PaperMC download API](https://paper.readthedocs.io/en/latest/site/api.html#downloads-api).
-3. If a new version/build is available, the default version and build(usually the latest) will be installed. Alternatively, the user can be prompted to manually select which version/build they want to be installed. You can use the `--interactive` flag for this.
-4. The selected version is downloaded to a temporary directory located somewhere on your computer(This directory is generated using the python tempfile module, meaning that it will be generated in a safe, unobtrusive manner, and will be automatically removed at termination of the script).
+1. Attempt to load current paper version/build(`/PATH_TO_SERVER_JAR/version_history.json`, or elsewhere if specified. 
+This script only supports official builds of the paper server, meaning that we may fail to read config 
+information for un-official builds). If no configuration data is found, and version info is not supplied via the 
+command line, then the version and build for the currently installed server will default to 0.
+2. Check for a new version/build using the 
+[PaperMC download API](https://paper.readthedocs.io/en/latest/site/api.html#downloads-api).
+3. If a new version/build is available, the default version and build(usually the latest) will be installed. 
+Alternatively, the user can be prompted to manually select which version/build they want to be installed. You can use 
+the `--interactive` flag for this.
+4. The selected version is downloaded to a temporary directory located somewhere on your computer
+(This directory is generated using the python tempfile module, meaning that it will be generated in a safe, 
+unobtrusive manner, and will be automatically removed at termination of the script).
 5. The currently installed version of the server is backed up to the temporary directory, and deleted. 
-6. The newly downloaded server is moved from the temporary directory to the path of the old server, and will retain the name of the old server(If an error occurs for any reason during the instillation procedure, then the script will attempt to recover your backed up version of the old server from the temporary directory).
+6. The newly downloaded server is moved from the temporary directory to the path of the old server, 
+and will retain the name of the old server(If an error occurs for any reason during the instillation procedure, 
+then the script will attempt to recover your backed up version of the old server from the temporary directory).
 
 This is the default operation of this script. However, you can fine tune the update process using the command line options
 listed below.
@@ -79,6 +89,13 @@ Prompts the user for the version they would like to install:
 
 Will not load configuration data:
 >-nlc, --no-load-config
+
+Sets config file path(`/PATH_TO_SERVER_JAR/version_history.json` by default):
+
+>-cf, --config-file [PATH TO CONFIG FILE]
+
+Will only output errors and interactive questions to the terminal:
+>-q, --quiet
 
 ## Deprecated Command Line Options
 
@@ -118,6 +135,7 @@ Check to see if a newer version is available, does not install:
 
 In earlier versions of PaperMC-Update, the script would keep a config file in the users home directory
 (Or elsewhere if specified) containing version information on the server so it can be persistent across runs. 
+
 There were many problems with this: it created unnecessary files, it was inaccurate, 
 and it made using PaperMC-Update a lot more complicated. Now, we read version info from a file named 
 'version_history.json', which is kept in the root directory of the server, and is managed by the server itself. This 
@@ -167,13 +185,37 @@ so be warned.
 
 # Conclusion
 
-This script provides a simple method to check/download/install PaperMC server updates. You can add your command to the beginning of your start file, to ensure that you are always running the latest server version. 
-If you are hosting a server for a friend/customer, you can use this script to manage the updating process for them, so they don't have to.
+This script provides a simple method to check/download/install PaperMC server updates. You can add your command to the 
+beginning of your start file, to ensure that you are always running the latest server version. 
+If you are hosting a server for a friend/customer, you can use this script to manage the updating process for them, 
+so they don't have to.
+
+# Changelog 
+
+## 1.1.0
+
+  - Added command line option '-q' for quiet output
+  - Fixed typos/output issues
+  - Can read config files in custom locations
+
+## 1.0.0
+
+  - Initial version
+  - Added support for reading configuration info directly from the paper versioning file
+  - Removed old command line options  
+  - Fixed some issues with selecting version
 
 # Special Thanks
 
 [devStorm](https://github.com/developStorm) - Helped with configuration file management, and offered valuable insight
 into the paper versioning file.
+
+# Pull Requests
+
+Pull requests are welcome and encouraged!
+
+If you have any bug fixes or changes, feel free to open a pull request.
+Any changes/fixes are greatly appreciated!
 
 # Issues/Bugs
 
@@ -184,6 +226,6 @@ If you are reporting a bug/error, be sure to include the following:
 1. Description of what you were doing
 2. All arguments used
 3. Version/build you are trying to install
-4. Version/build of the currently installed server(If you know it).
+4. Version/build of the currently installed server(If you know it)
 5. Fail point(If provided, should be for most cases)
 6. Stack trace/error name(If provided, should be for most cases) 
