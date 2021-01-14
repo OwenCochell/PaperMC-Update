@@ -460,15 +460,15 @@ class FileUtil:
     def _fail_install(self, point):
 
         """
-        Shows where the error occurred during the instillation
+        Shows where the error occurred during the installation
         :param point: Point of failure
         :return:
         """
 
         print("\n+==================================================+")
         print("> !ATTENTION! <")
-        print("An error occurred during the instillation, and we can not continue.")
-        print("We will attempt to recover your previous instillation(If applicable)")
+        print("An error occurred during the installation, and we can not continue.")
+        print("We will attempt to recover your previous installation(If applicable)")
         print("Fail point: {}".format(point))
         print("Detailed error info below:")
 
@@ -481,7 +481,7 @@ class FileUtil:
         :return:
         """
 
-        output("\n[ --== Instillation: ==-- ]")
+        output("\n[ --== installation: ==-- ]")
 
         # Creating backup of old file:
 
@@ -565,7 +565,7 @@ class FileUtil:
 
         output("# Done cleaning temporary directory!")
 
-        output("[ --== Instillation complete! ==-- ]")
+        output("[ --== installation complete! ==-- ]")
 
         return True
 
@@ -578,9 +578,9 @@ class FileUtil:
 
         print("+==================================================+")
         print("\n> !ATTENTION! <")
-        print("A failure has occurred during the instillation process.")
+        print("A failure has occurred during the installation process.")
         print("I'm sure you can see the error information above.")
-        print("This script will attempt to recover your old instillation.")
+        print("This script will attempt to recover your old installation.")
         print("If this operation fails, check the github page for more info: "
               "https://github.com/Owen-Cochell/PaperMC-Update")
 
@@ -605,7 +605,7 @@ class FileUtil:
 
             error_report(e)
 
-            print("Your previous instillation could not be recovered.")
+            print("Your previous installation could not be recovered.")
 
             return False
 
@@ -625,7 +625,7 @@ class FileUtil:
 
             error_report(e)
 
-            print("Your previous instillation could not be recovered.")
+            print("Your previous installation could not be recovered.")
 
             return False
 
@@ -859,7 +859,7 @@ class ServerUpdater:
 
                 # Invalid version selected
 
-                print("# Aborting instillation!")
+                print("# Aborting installation!")
 
                 return None, None
 
@@ -914,7 +914,7 @@ class ServerUpdater:
 
                 # Invalid build selected!
 
-                output("# Aborting instillation!")
+                output("# Aborting installation!")
 
                 return None, None
 
@@ -940,22 +940,22 @@ class ServerUpdater:
 
         if ver is None or build is None:
 
-            # Error occurred, cancel instillation
+            # Error occurred, cancel installation
 
             return
 
-        # Checking if user wants to continue with instillation
+        # Checking if user wants to continue with installation
 
         if self.prompt:
 
-            print("\nDo you want to continue with the instillation?")
+            print("\nDo you want to continue with the installation?")
 
             inp = input("(Y/N):").lower()
 
             if inp in ['n', 'no']:
                 # User does not want to continue, exit
 
-                output("Canceling instillation...")
+                output("Canceling installation...")
 
                 return
 
@@ -1031,7 +1031,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     output("+==========================================================================+")
-    output(r'''|     _____                              __  __          __      __        |  
+    output(r'''|     _____                              __  __          __      __        |
 |    / ___/___  ______   _____  _____   / / / /___  ____/ /___ _/ /____    |
 |    \__ \/ _ \/ ___/ | / / _ \/ ___/  / / / / __ \/ __  / __ `/ __/ _ \   |
 |   ___/ /  __/ /   | |/ /  __/ /     / /_/ / /_/ / /_/ / /_/ / /_/  __/   |
@@ -1039,7 +1039,7 @@ if __name__ == '__main__':
 |                                         /_/                              |''')
     output("+==========================================================================+")
     output("\n[PaperMC Server Updater]")
-    output("[Handles the checking, downloading, and instillation of server versions]")
+    output("[Handles the checking, downloading, and installation of server versions]")
     output("[Written by: Owen Cochell]\n")
 
     serv = ServerUpdater(args.path, config_file=args.config_file, config=args.no_load_config, prompt=args.interactive,
