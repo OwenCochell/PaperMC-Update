@@ -2,34 +2,46 @@
 A simple CLI script for automating the checking, downloading, and installing of PaperMC server updates.
 
 NOTE: This script can only be used for updating a [PaperMC Minecraft Server](https://papermc.io/). I highly recommend 
-their implementation, as it is incredibly fast, supports multiple plugin formats, and is highly customisable. 
+their implementation, as it is incredibly fast, supports multiple plugin formats, and is highly customizable. 
 Consider changing if any of that sounds good to you. You can find the PaperMC documentation 
 [Here](https://paper.readthedocs.io/en/latest/), and you can find their github page [Here](https://github.com/PaperMC).
 
 # Prerequisites
-You must have Python 3+ installed. It should come pre-installed on most systems. 
+You must have Python 3+ installed. It should come pre-installed on most linux systems. 
 This script has no other dependencies, so all you need is python! Instructions for installation are below:
 
 ## Linux:
 
 RPM:
->yum install python3.7
+>yum install python3.9
 
 Debian:
->apt install python3.7
+>apt install python3.9
 
-(Or use whatever packet manager is installed on your system)
-## MacOS:
-
->brew install python3.7
+Or use whatever packet manager is installed on your system.
+The only important part is specifying python3.9!
 
 ## Windows:
 
-Windows users can download python [Here](https://www.python.org/downloads/). The installation is very straightforward, 
+Windows users can download python [Here](https://www.python.org/downloads/windows/). The installation is very straightforward, 
 although we recommend you add python to your PATH environment variable, as this makes using python much easier.
 
 More information on installing/configuring python can be found [Here](https://www.python.org/downloads/).
-(Any python 3 version works, although I recommend python 3.7)
+(Any python 3 version works, although I recommend python 3.9)
+
+We also supply windows binaries that can be ran directly on windows systems without python!
+We use [PyInstaller](https://www.pyinstaller.org/) to build these binaries, and they are built using the one file option, or '-F'.
+
+These binaries are much slower than running via python, and there might be some weird bugs or quirks.
+They are built for windows only. We provide one with each version change.
+Find them [here](https://github.com/Owen-Cochell/PaperMC-Update/releases) in the releases!
+
+## MacOS:
+
+MacOS users can download python [Here](https://www.python.org/downloads/mac-osx/).
+
+Again, the installation is very straightforward, but more information can be found [Here](https://docs.python.org/3/using/mac.html).
+
 
 # Usage
 
@@ -49,14 +61,16 @@ information for un-official builds). If no configuration data is found, and vers
 command line, then the version and build for the currently installed server will default to 0.
 2. Check for a new version/build using the 
 [PaperMC download API](https://paper.readthedocs.io/en/latest/site/api.html#downloads-api).
-3. If a new version/build is available, the default version and build(usually the latest) will be installed. 
+3. If a new version/build is available, the default version and build(usually the latest) will be installed.
+If you wish to select a version/build to install, then you can use '--version' and '--build' arguments to specify this. 
 Alternatively, the user can be prompted to manually select which version/build they want to be installed. You can use 
 the `--interactive` flag for this.
 4. The selected version is downloaded to a temporary directory located somewhere on your computer
 (This directory is generated using the python tempfile module, meaning that it will be generated in a safe, 
 unobtrusive manner, and will be automatically removed at termination of the script).
-5. The currently installed version of the server is backed up to the temporary directory, and deleted. 
-6. The newly downloaded server is moved from the temporary directory to the path of the old server, 
+5. The currently installed version of the server is backed up to the temporary directory, and deleted.
+This option can be disabled if you so choose.
+6. The newly downloaded server jar is moved from the temporary directory to the path of the old server, 
 and will retain the name of the old server(If an error occurs for any reason during the instillation procedure, 
 then the script will attempt to recover your backed up version of the old server from the temporary directory).
 
@@ -91,8 +105,16 @@ Will not load configuration data:
 >-nlc, --no-load-config
 
 Sets config file path(`/PATH_TO_SERVER_JAR/version_history.json` by default):
-
 >-cf, --config-file [PATH TO CONFIG FILE]
+
+Disables the backup feature:
+>-nb, --no-backup
+
+Displays script version information:
+>-V, --script-version
+
+Displays server version, extracted from configuration file:
+>-sv, --server-version
 
 Will only output errors and interactive questions to the terminal:
 >-q, --quiet
@@ -120,16 +142,23 @@ Download and install the latest build of version 1.13.2, without checking:
 >python server_update.py --no-check --version 1.13.2 [PATH]
 
 Install latest version, regardless of server version:
->python server_update.py --no-load-config  --no-check [PATH]
+>python server_update.py --no-check [PATH]
 
 Install specific version, regardless of installed version:
->python server_update.py --no-load-config --no-check --version [VERSION TO INSTALL] --build [BUILD TO INSTALL] [PATH]
+>python server_update.py --no-check --version [VERSION TO INSTALL] --build [BUILD TO INSTALL] [PATH]
 
 Interactively select a version you want to install, regardless of server version:
 >python server_update.py --no-check --no-load --interactive [PATH]
 
 Check to see if a newer version is available, does not install:
 >python server_update.py --check-only [PATH]
+
+Display currently installed server version:
+>python server_update.py --server-version [PATH]
+
+Install a paper jar at the given location, without going through the update process.
+Great if you want to set up a new server install.
+>python server_update.py --new [PATH]
 
 # Notes on Deprecated Features
 
@@ -191,6 +220,27 @@ If you are hosting a server for a friend/customer, you can use this script to ma
 so they don't have to.
 
 # Changelog 
+
+## 1.2.0
+
+  Bug Fixes:
+
+  - Fixed an issue where the script would always determine that an update is necessary due to a type mismatch
+  - Fixed an issue in the interactive menu when selecting the build where no input would be valid, also a type mismatch
+
+  Features Added:
+
+  - '--no-backup' argument for disabling the backup operation
+  - '-V' argument for displaying script version and exiting
+  - '--server-version' argument for displaying the server version and exiting
+  - '--new' argument for skipping update operations and downloading a paper jar at the given location
+
+  Other Fixes:
+
+  - Added grouping to argparse, so the help menu should feel less cluttered
+  - Cleaned up the formatting of all docstrings
+  - Changed the wording in code comments
+  - Fixed many typos
 
 ## 1.1.0
 

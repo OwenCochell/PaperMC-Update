@@ -15,6 +15,8 @@ Error philosophy:
  > As long as it is LOGGED or DISPLAYED somewhere for the user to see, it has been handled.
  """
 
+__version__ = '1.2.0'
+
 
 def output(text):
 
@@ -33,10 +35,10 @@ def output(text):
 def error_report(exc, net=False):
 
     """
-    Function for displaying error information to the terminal
+    Function for displaying error information to the terminal.
+
     :param exc: Exception object
     :param net: Whether to include network information
-    :return:
     """
 
     print("+==================================================+")
@@ -95,16 +97,19 @@ class Update:
              'DNT': '1',
          }  # Request headers for contacting Paper Download API, emulating a Google client
 
-    def _progress_bar(self, total, step, end, prefix="", size=60, prog_char="#", empty_char="."):
+    def _progress_bar(self, total, step, end , prefix="", size=60, prog_char="#", empty_char="."):
 
         """
-        Outputs a simple progress bar to stdout
+        Outputs a simple progress bar to stdout.
+
+        We act as a generator, continuing to iterate and add to the bar progress
+        as we download more information.
+
         :param total: Total amount of computations
         :param step: Amount to increase the counter by
         :param end:  Number to end on
         :param prefix: What to show before the progress bar
         :param size: Size of the progress bar
-        :return:
         """
 
         # Iterating over the total number of iterations:
@@ -137,9 +142,9 @@ class Update:
     def _url_report(self, point):
 
         """
-        Reports an error during a request operation
+        Reports an error during a request operation.
+
         :param point: Point of failure
-        :return:
         """
 
         print("\n+==================================================+")
@@ -152,8 +157,9 @@ class Update:
     def download(self, path, version, build_num='latest'):
 
         """
-        Gets file from Paper API, and displays a progress bar
-        Write to the file specified in chunks, as to not fill up the memory
+        Gets file from Paper API, and displays a progress bar.
+        We write to the file specified in chunks, as to not fill up the memory.
+
         :param version: Version to download
         :param build_num: Build to download
         :param path: Path to file to write to
@@ -248,7 +254,8 @@ class Update:
     def _get(self, version=None, build_num=None):
 
         """
-        Gets RAW data from the Paper API, version info only
+        Gets RAW data from the Paper API, version info only.
+
         :param version: Version to include in the URL
         :param build_num: Build number to include in the URL
         :return: urllib Request object
@@ -295,7 +302,8 @@ class Update:
     def get_versions(self):
 
         """
-        Gets available versions of the server
+        Gets available versions of the server.
+
         :return: List of available versions
         """
 
@@ -322,7 +330,8 @@ class Update:
     def get_buildnums(self, version):
 
         """
-        Gets available build for a particular version
+        Gets available build for a particular version.
+
         :param version: Version to get builds for
         :return: List of builds
         """
@@ -361,7 +370,8 @@ class FileUtil:
     def create_temp_dir(self):
 
         """
-        Creates a temporary directory
+        Creates a temporary directory.
+
         :return: Temp file instance
         """
 
@@ -372,8 +382,7 @@ class FileUtil:
     def close_temp_dir(self):
 
         """
-        Closes created temporary directory
-        :return:
+        Closes created temporary directory.
         """
 
         self.temp.close()
@@ -460,9 +469,9 @@ class FileUtil:
     def _fail_install(self, point):
 
         """
-        Shows where the error occurred during the installation
+        Shows where the error occurred during the installation.
+
         :param point: Point of failure
-        :return:
         """
 
         print("\n+==================================================+")
@@ -474,40 +483,52 @@ class FileUtil:
 
         return
 
-    def install(self):
+    def install(self, backup=True, new=False):
 
         """
         "Installs" the contents of the temporary file into the target in the root server directory.
-        :return:
+
+        The new file should exist in the temporary directory before this method is invoked!
+
+        We backup the old jar file by default to the temporary directory,
+        and we will attempt to recover the old jar file in the event of any failures.
+        This feature can be disabled.
+
+        :param backup: Value determining if we should back up the old file
+        :type backup: bool
+        :param new: Determines if we are doing a new install, aka if we care about file operation errors
+        :type new: bool
         """
 
-        output("\n[ --== installation: ==-- ]")
+        output("\n[ --== Installation: ==-- ]")
 
         # Creating backup of old file:
 
-        output("# Creating backup of previous installation...")
+        if backup and not new:
 
-        try:
+            output("# Creating backup of previous installation ...")
 
-            shutil.copyfile(self.path, os.path.join(self.temp.name, 'backup'))
+            try:
 
-        except Exception as e:
+                shutil.copyfile(self.path, os.path.join(self.temp.name, 'backup'))
 
-            # Show install error
+            except Exception as e:
 
-            self._fail_install("File Backup")
+                # Show install error
 
-            # Show error info
+                self._fail_install("File Backup")
 
-            error_report(e)
+                # Show error info
 
-            return False
+                error_report(e)
 
-        output("# Backup created at: {}".format(os.path.join(self.temp.name, 'backup')))
+                return False
+
+            output("# Backup created at: {}".format(os.path.join(self.temp.name, 'backup')))
 
         # Removing current file:
 
-        output("# Deleting current file at {}...".format(self.path))
+        output("# Deleting current file at {} ...".format(self.path))
 
         try:
 
@@ -515,17 +536,21 @@ class FileUtil:
 
         except Exception as e:
 
-            self._fail_install("Old File Deletion")
+            if not new:
 
-            # Showing error
+                self._fail_install("Old File Deletion")
 
-            error_report(e)
+                # Showing error
 
-            # Recovering backup
+                error_report(e)
 
-            self._recover_backup()
+                # Recovering backup
 
-            return False
+                if backup:
+
+                    self._recover_backup()
+
+                return False
 
         output("# Removed original file!")
 
@@ -533,7 +558,7 @@ class FileUtil:
 
         try:
 
-            output("# Copying download data to root directory...")
+            output("# Copying download data to root directory ...")
             output("# ({} > {})".format(os.path.join(self.temp.name, 'download_data'),
                                         self.path))
 
@@ -551,9 +576,11 @@ class FileUtil:
 
             # Recover backup
 
-            self._recover_backup()
+            if backup and not new:
 
-            return False
+                self._recover_backup()
+
+                return False
 
         output("# Done copying download data to root directory!")
 
@@ -565,15 +592,14 @@ class FileUtil:
 
         output("# Done cleaning temporary directory!")
 
-        output("[ --== installation complete! ==-- ]")
+        output("[ --== Installation complete! ==-- ]")
 
         return True
 
     def _recover_backup(self):
 
         """
-        Recovers the backup of the old server jar file
-        :return:
+        Attempts to recover the backup of the old server jar file.
         """
 
         print("+==================================================+")
@@ -643,7 +669,7 @@ class ServerUpdater:
     Class that binds all server updater classes together
     """
 
-    def __init__(self, path, config_file=None, version=None, build=None, config=True, prompt=True):
+    def __init__(self, path, config_file=None, version='0', build=0, config=True, prompt=True):
 
         self.version = version  # Version of minecraft server we are running
         self.fileutil = FileUtil(path)  # Fileutility instance
@@ -661,8 +687,7 @@ class ServerUpdater:
     def _start(self, config):
 
         """
-        Starts the object, loads configuration
-        :return:
+        Starts the object, loads configuration.
         """
 
         temp_version = '0'
@@ -683,16 +708,25 @@ class ServerUpdater:
         self.version = (self.version if self.version != '0' else temp_version)
         self.buildnum = (self.buildnum if self.buildnum != 0 else temp_build)
 
+        self.report_version()
+
+        return
+
+    def report_version(self):
+
+        """
+        Outputs the current server version and build to the terminal.
+        """
+
         output("\nServer Version Information:")
         output("  > Version: [{}]".format(self.version))
         output("  > Build: [{}]".format(self.buildnum))
 
-        return
-
     def check(self):
 
         """
-        Checks if a new version is available
+        Checks if a new version is available.
+
         :return: True is new version, False if not/error
         """
 
@@ -733,7 +767,7 @@ class ServerUpdater:
 
             return False
 
-        if build[0] != str(self.buildnum):
+        if build[0] != self.buildnum:
 
             # New build available!
 
@@ -751,7 +785,9 @@ class ServerUpdater:
 
         """
         Selects a value from the choices.
-        Support updater keywords
+        We support updater keywords,
+        like 'latest' and ''.
+
         :param val: Value entered
         :param choice: Choices to choose from
         :param default: Default value
@@ -769,7 +805,7 @@ class ServerUpdater:
 
             # User wants latest
 
-            output("# Selecting latest {} - [{}]...".format(name, self._available_versions[0]))
+            output("# Selecting latest {} - [{}]...".format(name, choice[0]))
 
             val = choice[0]
 
@@ -792,9 +828,10 @@ class ServerUpdater:
     def version_select(self, default_version='latest', default_build='latest'):
 
         """
-        Prompts the user to select a version to download
-        Checks input against values from Paper API
-        Default value is recommended values
+        Prompts the user to select a version to download,
+        and checks input against values from Paper API.
+        Default value is recommended option, usually 'latest'.
+
         :param default_build: Default build number
         :param default_version: Default version
         :return: (version, build)
@@ -835,7 +872,7 @@ class ServerUpdater:
 
             for i in self._available_versions:
 
-                print("  > Version: [{}]".format(i))
+                print("  Version: [{}]".format(i))
 
             while True:
 
@@ -886,9 +923,11 @@ class ServerUpdater:
 
             # Displaying available builds
 
-            for i in nums:
+            for num, i in enumerate(nums):
 
                 print("  > Build Num: [{}]".format(i))
+
+                nums[num] = str(i)
 
             while True:
 
@@ -926,12 +965,24 @@ class ServerUpdater:
 
         return ver, build
 
-    def get_new(self, default_version='latest', default_build='latest'):
+    def get_new(self, default_version='latest', default_build='latest', backup=True, new=False):
 
         """
-        Downloads and installs the new version
-        Prompts the user to select a specific version
-        :return:
+        Downloads and installs the new version,
+        Prompts the user to select a specific version.
+
+        After the version is selected,
+        then we invoke the process of downloading the the file,
+        and installing it to the current location.
+
+        :param default_version: Default version to select if none is specified
+        :type default_version: str
+        :param default_build: Default build to select if none is specified
+        :type default_build: str
+        :param backup: Value determining if we should back up the old jar file
+        :type backup: bool
+        :param new: Value determining if we are doing a new install
+        :type new: bool
         """
 
         # Prompting user for version info:
@@ -981,7 +1032,7 @@ class ServerUpdater:
 
         # Installing downloaded data:
 
-        val = self.fileutil.install()
+        val = self.fileutil.install(backup=backup, new=new)
 
         if not val:
 
@@ -1007,20 +1058,32 @@ if __name__ == '__main__':
                                      epilog="Please check the github page for more info: "
                                             "https://github.com/Owen-Cochell/PaperMC-Update.")
 
-    parser.add_argument('path', help='Path to file to be updated')
-    parser.add_argument('-v', '--version', help='Server version to install(Sets default value)', default='latest')
-    parser.add_argument('-b', '--build', help='Server build to install(Sets default value)', default='latest')
-    parser.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0')
-    parser.add_argument('-ib', help='Sets the currently installed server build, ignores config', default=0)
+    parser.add_argument('path', help='Path to paper jar file')
+
+    version = parser.add_argument_group('Version Options', 'Arguments for selecting and altering server version information')
+
+    version.add_argument('-v', '--version', help='Server version to install(Sets default value)', default='latest')
+    version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default='latest')
+    version.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0')
+    version.add_argument('-ib', help='Sets the currently installed server build, ignores config', default=0)
+
+    file = parser.add_argument_group("File Options", "Arguments for altering how we work with files")
+
+    file.add_argument('-nlc', '--no-load-config', help='Will not load Paper version config', action='store_false')
+    file.add_argument('-cf', '--config-file', help='Path to Paper configuration file to read from'
+                                                     '(Defaults to [SERVER_JAR_DIR]/version_history.json)')
+    file.add_argument('-nb', '--no-backup', help='Disables the backup operating of the old server jar', action='store_true')
+    file.add_argument('-n', '--new', help='Installs a new paper jar instead of updating. Great for configuring a new server install.', 
+                        action='store_true')
+
     parser.add_argument('-c', '--check-only', help='Checks for an update, does not install', action='store_true')
     parser.add_argument('-nc', '--no-check', help='Does not check for an update, skips to install', action='store_true')
     parser.add_argument('-i', '--interactive', help='Prompts the user for the version they would like to install',
                         action='store_true')
-    parser.add_argument('-nlc', '--no-load-config', help='Will not load Paper version config.', action='store_false')
-    parser.add_argument('-cf', '--config-file', help='Path to Paper configuration file to read from'
-                                                     '(Defaults to [SERVER_JAR_DIR]/version_history.json)')
     parser.add_argument('-q', '--quiet', help="Will only output errors and interactive questions to the terminal",
                         action='store_true')
+    parser.add_argument('-V', '--script-version', help='Displays script version', action='store_true')
+    parser.add_argument('-sv', '--server-version', help="Displays server version from configuration file", action='store_true')
 
     # Deprecated arguments - Included for compatibility, but do nothing
 
@@ -1042,14 +1105,32 @@ if __name__ == '__main__':
     output("[Handles the checking, downloading, and installation of server versions]")
     output("[Written by: Owen Cochell]\n")
 
-    serv = ServerUpdater(args.path, config_file=args.config_file, config=args.no_load_config, prompt=args.interactive,
+    # Check if we want the version of the script:
+
+    if args.script_version:
+
+        # Just display the script information:
+
+        print("PaperMC-Update Version: {}".format(__version__))
+
+        exit()
+
+    serv = ServerUpdater(args.path, config_file=args.config_file, config=args.no_load_config or args.server_version, prompt=args.interactive,
                          version=args.iv, build=args.ib)
 
     update_available = True
 
+    # Check if we are just looking for server info:
+
+    if args.server_version:
+
+        # Already printed it, lets exit
+
+        exit()        
+
     # Checking if we are skipping the update
 
-    if not args.no_check:
+    if not args.no_check and not args.new:
 
         # Allowed to check for update:
 
@@ -1061,4 +1142,5 @@ if __name__ == '__main__':
 
         # Allowed to install/Can install
 
-        serv.get_new(default_version=args.version, default_build=args.build)
+        serv.get_new(default_version=args.version, default_build=args.build, backup=args.no_backup or args.new, 
+        new=args.new)

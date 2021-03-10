@@ -6,6 +6,10 @@
 out
 gen
 
+# VSCode files:
+
+.vscode/
+
 # Python Environments
 .env
 .venv
