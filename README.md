@@ -2,7 +2,7 @@
 A simple CLI script for automating the checking, downloading, and installing of PaperMC server updates.
 
 NOTE: This script can only be used for updating a [PaperMC Minecraft Server](https://papermc.io/). I highly recommend 
-there implementation, as it is incredibly fast, supports multiple plugin formats, and is highly customizable. 
+their implementation, as it is incredibly fast, supports multiple plugin formats, and is highly customizable. 
 Consider switching if any of that sounds good to you. You can find the PaperMC documentation 
 [Here](https://paper.readthedocs.io/en/latest/), and you can find their github page [Here](https://github.com/PaperMC).
 
@@ -46,7 +46,7 @@ MacOS users can download python [Here](https://www.python.org/downloads/mac-osx/
 
 Again, the installation is very straightforward, but more information can be found [Here](https://docs.python.org/3/using/mac.html).
 
-# Note on python versions:
+# Note on Python Versions:
 
 In some systems, the 'python' command may point to an older version of python.
 As stated above, we require python 3.6 or above, so it may be necessary to manually specify the python version to use.
