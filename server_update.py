@@ -1,13 +1,28 @@
+import sys
+
+# Before we do ANYTHING, we check to make sure python is the correct version!
+
+if sys.version_info < (3,6,0):
+
+    sys.stdout.write("\n--== [ Invalid python version! ] ==--\n")
+    sys.stdout.write("Current version: " + sys.version + '\n')
+    sys.stdout.write("Expected version: 3.6+\n")
+    sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
+
+    exit()
+
 import tempfile
 import urllib.request
-from urllib.error import URLError
 import os
 import shutil
 import json
 import sys
-from math import ceil
 import traceback
 import argparse
+
+from math import ceil
+from urllib.error import URLError
+
 
 """
 A Set of tools to automate the server update process.
@@ -15,7 +30,7 @@ Error philosophy:
  > As long as it is LOGGED or DISPLAYED somewhere for the user to see, it has been handled.
  """
 
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 
 
 def output(text):
@@ -1066,6 +1081,7 @@ if __name__ == '__main__':
     version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default='latest')
     version.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0')
     version.add_argument('-ib', help='Sets the currently installed server build, ignores config', default=0)
+    version.add_argument('-sv', '--server-version', help="Displays server version from configuration file", action='store_true')
 
     file = parser.add_argument_group("File Options", "Arguments for altering how we work with files")
 
@@ -1082,8 +1098,8 @@ if __name__ == '__main__':
                         action='store_true')
     parser.add_argument('-q', '--quiet', help="Will only output errors and interactive questions to the terminal",
                         action='store_true')
-    parser.add_argument('-V', '--script-version', help='Displays script version', action='store_true')
-    parser.add_argument('-sv', '--server-version', help="Displays server version from configuration file", action='store_true')
+    parser.add_argument('-V', '--script-version', help='Displays script version', version=__version__, action='version')
+    
 
     # Deprecated arguments - Included for compatibility, but do nothing
 

@@ -3,11 +3,11 @@ A simple CLI script for automating the checking, downloading, and installing of 
 
 NOTE: This script can only be used for updating a [PaperMC Minecraft Server](https://papermc.io/). I highly recommend 
 there implementation, as it is incredibly fast, supports multiple plugin formats, and is highly customizable. 
-Consider changing if any of that sounds good to you. You can find the PaperMC documentation 
+Consider switching if any of that sounds good to you. You can find the PaperMC documentation 
 [Here](https://paper.readthedocs.io/en/latest/), and you can find their github page [Here](https://github.com/PaperMC).
 
 # Prerequisites
-You must have Python 3+ installed. It should come pre-installed on most linux systems. 
+You must have Python 3.6+ installed. It should come pre-installed on most linux systems. 
 This script has no other dependencies, so all you need is python! Instructions for installation are below:
 
 ## Linux:
@@ -21,13 +21,17 @@ Debian:
 Or use whatever packet manager is installed on your system.
 The only important part is specifying python3.9!
 
+You don't have to install the latest version of python for this script to work, but I highly recommend you do so!
+Again, we require python 3.6 or above.
+
+
 ## Windows:
 
 Windows users can download python [Here](https://www.python.org/downloads/windows/). The installation is very straightforward, 
 although we recommend you add python to your PATH environment variable, as this makes using python much easier.
 
 More information on installing/configuring python can be found [Here](https://www.python.org/downloads/).
-(Any python 3 version works, although I recommend python 3.9)
+(Any python 3.6+ version works, although I recommend python 3.9)
 
 We also supply windows binaries that can be ran directly on windows systems without python!
 We use [PyInstaller](https://www.pyinstaller.org/) to build these binaries, and they are built using the one file option, or '-F'.
@@ -42,6 +46,30 @@ MacOS users can download python [Here](https://www.python.org/downloads/mac-osx/
 
 Again, the installation is very straightforward, but more information can be found [Here](https://docs.python.org/3/using/mac.html).
 
+# Note on python versions:
+
+In some systems, the 'python' command may point to an older version of python.
+As stated above, we require python 3.6 or above, so it may be necessary to manually specify the python version to use.
+
+This can be done like so:
+
+>python[VERSION] script_to_run.py
+
+Using this template, we can run python 3.7 like this:
+
+>python3.7 script_to_run.py
+
+This usage is most prevalent on linux devices,
+as they may have older versions of python installed for compatibility reasons.
+
+To find the version of python your command points to, you can check it's version:
+
+>python --version
+
+If it is below 3.6, then you will have to manually specify the version to run!
+
+From this point on, we will use the default 'python' command in our examples.
+Be sure to specify your python version if necessary!
 
 # Usage
 
@@ -109,6 +137,9 @@ Sets config file path(`/PATH_TO_SERVER_JAR/version_history.json` by default):
 
 Disables the backup feature:
 >-nb, --no-backup
+
+Installs a new paper jar to the specified location:
+>-n, --new
 
 Displays script version information:
 >-V, --script-version
@@ -220,6 +251,19 @@ If you are hosting a server for a friend/customer, you can use this script to ma
 so they don't have to.
 
 # Changelog 
+
+## 1.2.1
+
+  Bug Fixes:
+
+   - Added a version check to the start of the script, which exit if the python version is below 3.6
+   - When checking script version with '-V', we now display the version and exit instead raising an error
+
+  Other Fixes:
+
+   - Added a section to the readme explaining python versions and how to manually specify them
+   - Added some missing command line arguments to the readme
+   - Moved '--server-version' argument to the 'version' group in argparse
 
 ## 1.2.0
 
