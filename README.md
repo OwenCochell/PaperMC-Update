@@ -18,7 +18,7 @@ RPM:
 Debian:
 >apt install python3.9
 
-Or use whatever packet manager is installed on your system.
+Or use whatever package manager is installed on your system.
 The only important part is specifying python3.9!
 
 You don't have to install the latest version of python for this script to work, but I highly recommend you do so!
@@ -78,7 +78,8 @@ You may run the command like so:
 > python server_update.py [PATH]
 
 Where [PATH] is the path to your paperclip.jar file. More info on the paperclip.jar format can be found 
-[Here](https://paper.readthedocs.io/en/latest/about/structure.html#id2). If a new file is downloaded, 
+[Here](https://paper.readthedocs.io/en/latest/about/structure.html#id2). 
+By default, when a new file is downloaded, 
 it will be installed to this path under the same name.
 
 This command will do the following:
@@ -120,6 +121,9 @@ Sets the currently installed server version, ignores config data:
 Sets the currently installed server build, ignores config data:
 >-ib [BUILD]
 
+Sets the output name of the new jar file:
+> -o, --output
+
 Checks for an update, does not install:
 >-c, --check-only
 
@@ -138,6 +142,12 @@ Sets config file path(`/PATH_TO_SERVER_JAR/version_history.json` by default):
 Disables the backup feature:
 >-nb, --no-backup
 
+Copies the old jar file to a new location:
+>-co, --copy-old
+
+Does not rename the new jar file:
+>-nr, --no-rename
+
 Installs a new paper jar to the specified location:
 >-n, --new
 
@@ -149,6 +159,15 @@ Displays server version, extracted from configuration file:
 
 Will only output errors and interactive questions to the terminal:
 >-q, --quiet
+
+Specifies the output name of the new file:
+>-o, --output [NAME]
+
+Does not rename the new file, uses recommended name from the PaperAPI:
+>-nr, --no-rename
+
+Copies the old file to a new location before the installation process:
+>-co, --copy-old [PATH]
 
 ## Deprecated Command Line Options
 
@@ -163,6 +182,89 @@ Will not dump configuration data:
 
 Specify which config directory should be used, defaults to `/DIR_OF_YOUR_SERVER_JAR_FILE/server_update`:
 >--config [PATH]
+
+## Note on filenames:
+
+We have a couple ways of specifying the target and output filenames.
+In these examples, 'old file' is the jar file that is currently installed.
+'New file' is the new file jar file that is being installed in its place.
+
+In these coming examples, lets say you have a jar file you want to update located here:
+>minecraft/paper.jar
+
+### The Best Way:
+
+The easy way to tell the script where the file to update is located is to pass the path to said file, like so:
+>python server_update.py minecraft/paper.jar
+
+In this example, the old file will be backed up and deleted.
+When the new file is downloaded,
+it will be renamed to 'paper.jar' and moved to the directory the old file was in,
+effectively replacing it.
+
+This is the recommended way to specify filenames!
+Specifying the path to the jar file to update will allow the script to 
+automatically backup, move, and delete your files for you.
+It also ensures that no matter the version or operations done to the target file,
+it will always have the same name.
+
+### Custom Output Names:
+
+You can also specify a custom name of the new file like so:
+>python server_update.py -o new_file.jar minecraft/paper.jar
+
+This will do the same as the example above, 
+but instead of the new file retaining the old name,
+it will be renamed to the value you specified.
+
+In our example, the old file will be backed up and deleted as usual,
+but the new file will be renamed to 'new_file.jar',
+and moved to the directory the old file was in.
+
+### Keeping Old File:
+
+You can use the '--copy-old' parameter
+to specify where you want the old file to be copied to.
+
+Using the example from above:
+>python server_update.py --copy-old paper_old.jar minecraft/paper.jar
+
+The old file will still be deleted,
+but a copy of it will be saved to 'paper_old.jar'.
+
+You can also specify a path like this:
+>python server_update.py --copy-old /new/path/file.jar minecraft/paper.jar
+
+In this example, the old file is copied to '/new/path/file.jar'
+before the installation operation.
+
+These options will be ignored if there is no target file!
+
+Be warned, that the old file will overwrite any files in the copy location
+that share the same name!
+
+### Other Filename Stuff:
+
+If no target filename is specified from the path,
+and no output filename is specified,
+then the new file will not be renamed.
+You can also use the '--no-rename'
+parameter to prevent the new file from being renamed.
+If the file is not going to be renamed,
+then we use the recommended filename from the PaperAPI.
+
+The recommended name usually looks something like this:
+>paper-[VERSION]-[BUILD].jar
+
+So, if you downloaded build 734 version 1.16.5:
+>paper-1.16.5-734.jar
+
+You can specify a directory to target instead of a file like this:
+>python server_update.py minecraft/
+
+This will automatically disable old file deletion and backup.
+The newly downloaded file will simply be moved to the target directory,
+and will not be renamed(unless otherwise instructed by the '-o' parameter).
 
 # Examples:
 
@@ -189,7 +291,10 @@ Display currently installed server version:
 
 Install a paper jar at the given location, without going through the update process.
 Great if you want to set up a new server install.
->python server_update.py --new [PATH]
+>python server_update.py --new -o paper.jar [PATH]
+
+Copy the old file to a new location before the installation process:
+>python server_update.py --copy-old /new/spot/old.jar [PATH]
 
 # Notes on Deprecated Features
 
@@ -251,6 +356,24 @@ If you are hosting a server for a friend/customer, you can use this script to ma
 so they don't have to.
 
 # Changelog 
+
+## 1.3.0
+
+  Bug Fixes:
+
+    - Fixed huge bug where script would crash due to a missing argparse argument
+    - Fixed bug where if file copy failed during install, the script would continue instead of exit
+
+  Features added:
+
+    - User can now specify output name of new file
+    - User can now copy old file to a separate location before the update process
+    - Script now uses recommended paper name if another name is not specified
+
+  Other FIxes:
+
+    - Added a section to the readme explaining how to handle filenames
+    - Added some examples demonstrating the new command line arguments
 
 ## 1.2.1
 

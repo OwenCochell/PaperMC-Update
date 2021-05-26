@@ -1,3 +1,4 @@
+from posixpath import basename, dirname
 import sys
 
 # Before we do ANYTHING, we check to make sure python is the correct version!
@@ -19,6 +20,7 @@ import json
 import sys
 import traceback
 import argparse
+import re
 
 from math import ceil
 from urllib.error import URLError
@@ -30,7 +32,7 @@ Error philosophy:
  > As long as it is LOGGED or DISPLAYED somewhere for the user to see, it has been handled.
  """
 
-__version__ = '1.2.1'
+__version__ = '1.3.0'
 
 
 def output(text):
@@ -112,6 +114,8 @@ class Update:
              'DNT': '1',
          }  # Request headers for contacting Paper Download API, emulating a Google client
 
+        self.download_path = ''  # Path the file was downloaded to
+
     def _progress_bar(self, total, step, end , prefix="", size=60, prog_char="#", empty_char="."):
 
         """
@@ -177,7 +181,7 @@ class Update:
 
         :param version: Version to download
         :param build_num: Build to download
-        :param path: Path to file to write to
+        :param path: Path to directory to write to
         :return: True on success, False on Failure
         """
 
@@ -216,9 +220,14 @@ class Update:
 
         output("Download Size: {}".format(length))
 
-        file = open(path, mode='ba')
+        # Get filename for download:
 
-        # Using progress bar to visualise download:
+        name = os.path.join(path, data.getheader('content-disposition').split('=')[1])
+        self.download_path = name
+
+        file = open(name, mode='ba')
+
+        # Using progress bar to visualize download:
 
         try:
 
@@ -373,13 +382,13 @@ class Update:
 class FileUtil:
 
     """
-    Class for managing the creating/deleting/moving of server files
+    Class for managing the creating/deleting/moving of server files.
     """
 
     def __init__(self, path, config=None):
 
-        self.path = path  # Path to file being updated
-        self.temp = None  # Tempdir instance
+        self.path: str = os.path.abspath(path)  # Path to working directory
+        self.temp: tempfile.TemporaryDirectory  # Tempdir instance
         self.config_default = 'version_history.json'  # Default name of paper versioning file
 
     def create_temp_dir(self):
@@ -498,7 +507,7 @@ class FileUtil:
 
         return
 
-    def install(self, backup=True, new=False):
+    def install(self, file_path: str, target_copy: str=None, file_name: str=None, backup=True, new=False, no_delete=True):
 
         """
         "Installs" the contents of the temporary file into the target in the root server directory.
@@ -509,17 +518,57 @@ class FileUtil:
         and we will attempt to recover the old jar file in the event of any failures.
         This feature can be disabled.
 
+        :param file_path: The path to the new file to install
+        :type new_file: str
+        :param target_copy: Where to copy the old file to
+        :type target_copy: str
+        :param file_name: What to rename the new file to, None for no change
+        :type file_name: str
         :param backup: Value determining if we should back up the old file
         :type backup: bool
         :param new: Determines if we are doing a new install, aka if we care about file operation errors
         :type new: bool
+        :param no_delete: Boolean determining if we should delete the old file
         """
+
+        # Resolve output filename:
+
+        if file_name is None:
+
+            file_name = os.path.basename(file_path)
 
         output("\n[ --== Installation: ==-- ]")
 
+        # Checking if we should copy the old file:
+
+        if target_copy is not None and os.path.isfile(self.path):
+
+            # Copy the old file:
+
+            output("# Copying old file ...")
+            output("# ({} > {})".format(self.path, target_copy))
+
+            try:
+
+                shutil.copy(self.path, target_copy)
+
+            except Exception as e:
+
+                # Copy error:
+
+                self._fail_install("Old File Copy")
+
+                # Report the error:
+
+                error_report(e)
+
+                # Exit, install failed!
+
+                return False
+
         # Creating backup of old file:
 
-        if backup and not new:
+        if backup and os.path.isfile(self.path) and not new:
 
             output("# Creating backup of previous installation ...")
 
@@ -541,44 +590,57 @@ class FileUtil:
 
             output("# Backup created at: {}".format(os.path.join(self.temp.name, 'backup')))
 
-        # Removing current file:
+        # Determine if we should delete the original file:
 
-        output("# Deleting current file at {} ...".format(self.path))
+        if os.path.isfile(self.path) and not new:
 
-        try:
+            # Removing current file:
 
-            os.remove(self.path)
+            output("# Deleting current file at {} ...".format(self.path))
 
-        except Exception as e:
+            try:
 
-            if not new:
+                os.remove(self.path)
 
-                self._fail_install("Old File Deletion")
+            except Exception as e:
 
-                # Showing error
+                if not new:
 
-                error_report(e)
+                    self._fail_install("Old File Deletion")
 
-                # Recovering backup
+                    # Showing error
 
-                if backup:
+                    error_report(e)
 
-                    self._recover_backup()
+                    # Recovering backup
 
-                return False
+                    if backup:
 
-        output("# Removed original file!")
+                        self._recover_backup()
+
+                    return False
+
+            output("# Removed original file!")
 
         # Copying downloaded file to root:
 
         try:
 
             output("# Copying download data to root directory ...")
-            output("# ({} > {})".format(os.path.join(self.temp.name, 'download_data'),
-                                        self.path))
+            output("# ({} > {})".format(file_path, os.path.join(os.path.dirname(self.path), file_name)))
 
-            shutil.copyfile(os.path.join(self.temp.name, 'download_data'), self.path)
+            if file_name is None:
 
+                # Do not rename the downloaded file!
+
+                shutil.copy(file_path, os.path.dirname(self.path))
+
+            else:
+
+                # Copy to the new directory with the given name:
+
+                shutil.copyfile(file_path, os.path.join(os.path.dirname(self.path), file_name))
+                
         except Exception as e:
 
             # Install error
@@ -591,11 +653,13 @@ class FileUtil:
 
             # Recover backup
 
-            if backup and not new:
+            if backup and os.path.isfile(self.path) and not new:
 
                 self._recover_backup()
 
                 return False
+
+            return False
 
         output("# Done copying download data to root directory!")
 
@@ -684,7 +748,7 @@ class ServerUpdater:
     Class that binds all server updater classes together
     """
 
-    def __init__(self, path, config_file=None, version='0', build=0, config=True, prompt=True):
+    def __init__(self, path, config_file=None, version='0', build=0, config=True, prompt=True, regex=None):
 
         self.version = version  # Version of minecraft server we are running
         self.fileutil = FileUtil(path)  # Fileutility instance
@@ -980,7 +1044,7 @@ class ServerUpdater:
 
         return ver, build
 
-    def get_new(self, default_version='latest', default_build='latest', backup=True, new=False):
+    def get_new(self, default_version='latest', default_build='latest', backup=True, new=False, target_copy=None, output_name=None):
 
         """
         Downloads and installs the new version,
@@ -998,6 +1062,10 @@ class ServerUpdater:
         :type backup: bool
         :param new: Value determining if we are doing a new install
         :type new: bool
+        :param target_copy: Path we should copy the old file to
+        :type no_delete: str
+        :param output_name: Name of the new file. None to keep original name
+        :type output_name: str
         """
 
         # Prompting user for version info:
@@ -1035,7 +1103,7 @@ class ServerUpdater:
 
         # Starting download process:
 
-        val = self.update.download(os.path.join(self.fileutil.temp.name, 'download_data'), ver, build_num=build)
+        val = self.update.download(self.fileutil.temp.name, ver, build_num=build)
 
         if not val:
 
@@ -1047,7 +1115,7 @@ class ServerUpdater:
 
         # Installing downloaded data:
 
-        val = self.fileutil.install(backup=backup, new=new)
+        val = self.fileutil.install(self.update.download_path, file_name=output_name, backup=backup, new=new, target_copy=target_copy)
 
         if not val:
 
@@ -1077,11 +1145,17 @@ if __name__ == '__main__':
 
     version = parser.add_argument_group('Version Options', 'Arguments for selecting and altering server version information')
 
+    # +===========================================+
+    # Server version arguments:
+
     version.add_argument('-v', '--version', help='Server version to install(Sets default value)', default='latest')
     version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default='latest')
     version.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0')
     version.add_argument('-ib', help='Sets the currently installed server build, ignores config', default=0)
     version.add_argument('-sv', '--server-version', help="Displays server version from configuration file", action='store_true')
+
+    # +===========================================+
+    # File command line arguments:
 
     file = parser.add_argument_group("File Options", "Arguments for altering how we work with files")
 
@@ -1091,6 +1165,11 @@ if __name__ == '__main__':
     file.add_argument('-nb', '--no-backup', help='Disables the backup operating of the old server jar', action='store_true')
     file.add_argument('-n', '--new', help='Installs a new paper jar instead of updating. Great for configuring a new server install.', 
                         action='store_true')
+    file.add_argument('-o', '--output', help='Name of the new file')
+    file.add_argument('-nr', '--no-rename', help='Does not rename the new file', action='store_true')
+    file.add_argument('-co', '--copy-old', help='Copies the old file to a new location')
+    # +===========================================+
+    # General command line arguments:
 
     parser.add_argument('-c', '--check-only', help='Checks for an update, does not install', action='store_true')
     parser.add_argument('-nc', '--no-check', help='Does not check for an update, skips to install', action='store_true')
@@ -1121,20 +1200,28 @@ if __name__ == '__main__':
     output("[Handles the checking, downloading, and installation of server versions]")
     output("[Written by: Owen Cochell]\n")
 
-    # Check if we want the version of the script:
-
-    if args.script_version:
-
-        # Just display the script information:
-
-        print("PaperMC-Update Version: {}".format(__version__))
-
-        exit()
-
     serv = ServerUpdater(args.path, config_file=args.config_file, config=args.no_load_config or args.server_version, prompt=args.interactive,
                          version=args.iv, build=args.ib)
 
     update_available = True
+
+    # Figure out the output name:
+
+    name = None
+
+    if not args.no_rename:
+
+        if args.output:
+
+            # Name was explicitly given to us:
+
+            name = args.output
+
+        elif os.path.basename(args.path) != '':
+
+            # Get filename from the given path:
+
+            name = os.path.basename(args.path)
 
     # Check if we are just looking for server info:
 
@@ -1159,4 +1246,4 @@ if __name__ == '__main__':
         # Allowed to install/Can install
 
         serv.get_new(default_version=args.version, default_build=args.build, backup=args.no_backup or args.new, 
-        new=args.new)
+                    new=args.new, output_name=name, target_copy=args.copy_old)
