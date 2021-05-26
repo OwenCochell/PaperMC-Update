@@ -361,19 +361,19 @@ so they don't have to.
 
   Bug Fixes:
 
-    - Fixed huge bug where script would crash due to a missing argparse argument
-    - Fixed bug where if file copy failed during install, the script would continue instead of exit
+   - Fixed huge bug where script would crash due to a missing argparse argument
+   - Fixed bug where if file copy failed during install, the script would continue instead of exit
 
   Features added:
 
-    - User can now specify output name of new file
-    - User can now copy old file to a separate location before the update process
-    - Script now uses recommended paper name if another name is not specified
+   - User can now specify output name of new file
+   - User can now copy old file to a separate location before the update process
+   - Script now uses recommended paper name if another name is not specified
 
   Other FIxes:
 
-    - Added a section to the readme explaining how to handle filenames
-    - Added some examples demonstrating the new command line arguments
+   - Added a section to the readme explaining how to handle filenames
+   - Added some examples demonstrating the new command line arguments
 
 ## 1.2.1
 
