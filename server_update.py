@@ -20,7 +20,6 @@ import json
 import sys
 import traceback
 import argparse
-import re
 
 from math import ceil
 from urllib.error import URLError
@@ -32,7 +31,7 @@ Error philosophy:
  > As long as it is LOGGED or DISPLAYED somewhere for the user to see, it has been handled.
  """
 
-__version__ = '1.3.0'
+__version__ = '1.4.0'
 
 
 def output(text):

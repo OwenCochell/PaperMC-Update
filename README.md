@@ -299,12 +299,12 @@ Copy the old file to a new location before the installation process:
 # Notes on Deprecated Features
 
 In earlier versions of PaperMC-Update, the script would keep a config file in the users home directory
-(Or elsewhere if specified) containing version information on the server so it can be persistent across runs. 
+(Or elsewhere if specified) containing version information on the server so it can be persistent across runs.
 
-There were many problems with this: it created unnecessary files, it was inaccurate, 
-and it made using PaperMC-Update a lot more complicated. Now, we read version info from a file named 
-'version_history.json', which is kept in the root directory of the server, and is managed by the server itself. This 
-eliminates the need for 'script-generated configuration files', 
+There were many problems with this: it created unnecessary files, it was inaccurate,
+and it made using PaperMC-Update a lot more complicated. Now, we read version info from a file named
+'version_history.json', which is kept in the root directory of the server, and is managed by the server itself. This
+eliminates the need for 'script-generated configuration files',
 and makes PaperMC-Update easier to use and more accurate.
 
 However, their are some things to keep in mind:
@@ -357,6 +357,12 @@ so they don't have to.
 
 # Changelog 
 
+## 1.4.0
+
+  Features Added:
+
+    - Added support for the PaperMC v2 API, the usage of the script remains unchanged
+
 ## 1.3.0
 
   Bug Fixes:
@@ -370,7 +376,7 @@ so they don't have to.
    - User can now copy old file to a separate location before the update process
    - Script now uses recommended paper name if another name is not specified
 
-  Other FIxes:
+  Other Fixes:
 
    - Added a section to the readme explaining how to handle filenames
    - Added some examples demonstrating the new command line arguments
@@ -445,4 +451,4 @@ If you are reporting a bug/error, be sure to include the following:
 3. Version/build you are trying to install
 4. Version/build of the currently installed server(If you know it)
 5. Fail point(If provided, should be for most cases)
-6. Stack trace/error name(If provided, should be for most cases) 
+6. Stack trace/error name(If provided, should be for most cases)
