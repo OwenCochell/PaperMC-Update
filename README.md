@@ -361,7 +361,7 @@ so they don't have to.
 
   Features Added:
 
-    - Added support for the PaperMC v2 API, the usage of the script remains unchanged
+   - Added support for the PaperMC v2 API, the usage of the script remains unchanged
 
 ## 1.3.0
 
