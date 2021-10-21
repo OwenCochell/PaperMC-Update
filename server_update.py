@@ -813,7 +813,7 @@ class ServerUpdater:
         output("  > Version: [{}]".format(self.version))
         output("  > Build: [{}]".format(self.buildnum))
 
-    def check(self, default_version=0):
+    def check(self):
 
         """
         Checks if a new version is available.
@@ -835,16 +835,14 @@ class ServerUpdater:
 
             return False
 
-        if default_version == 0:
+        if ver[-1] != self.version:
 
-            if ver[-1] != self.version:
+            # New version available!
 
-                # New version available!
+            output("# New Version available! - [Version: {}]".format(ver[-1]))
+            output("[ --== Version check complete! ==-- ]\n")
 
-                output("# New Version available! - [Version: {}]".format(ver[-1]))
-                output("[ --== Version check complete! ==-- ]\n")
-
-                return True
+            return True
 
         output("# No new version available.")
 
@@ -1251,7 +1249,7 @@ if __name__ == '__main__':
 
         # Allowed to check for update:
 
-        update_available = serv.check(args.version)
+        update_available = serv.check()
 
     # Checking if we can install:
 
