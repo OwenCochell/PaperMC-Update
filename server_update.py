@@ -105,7 +105,7 @@ class Update:
     def __init__(self, ver):
 
         self.ver = ver  # Version of the minecraft server we are currently using.
-        self._base = 'https://papermc.io/api/v1/paper'  # Base URL to build of off
+        self._base = 'https://papermc.io/api/v2/projects/paper'  # Base URL to build of off
         self._headers = {
              'Content-Type': 'application/json;charset=UTF-8',
              'Accept': 'application/json, text/plain, */*',
@@ -187,9 +187,21 @@ class Update:
 
         output("\n[ --== Starting Download: ==-- ]")
 
+        # Get download name
+
+        download_name = self._get(version, build_num)
+
+        if download_name is None:
+
+            # Error occurred
+
+            return None
+
+        download_name = json.loads(download_name.read())['downloads']['application']['name']
+
         # Building URL here:
 
-        url = self._base + '/' + str(version) + '/' + str(build_num) + '/download'
+        url = self._base + '/versions/' + str(version) + '/builds/' + str(build_num) + '/downloads/' + str(download_name)
 
         output("URL: {}".format(url))
 
@@ -293,13 +305,13 @@ class Update:
 
             # Specific version requested:
 
-            final = final + '/' + str(version)
+            final = final + '/versions/' + str(version)
 
             if build_num is not None:
 
                 # Specific build num requested:
 
-                final = final + '/' + str(build_num)
+                final = final + '/builds/' + str(build_num)
 
         # Creating request here:
 
@@ -376,7 +388,7 @@ class Update:
 
         output("  > Done fetching build info!")
 
-        return data['builds']['all']
+        return data['builds']
 
 
 class FileUtil:
@@ -640,7 +652,7 @@ class FileUtil:
                 # Copy to the new directory with the given name:
 
                 shutil.copyfile(file_path, os.path.join(os.path.dirname(self.path), file_name))
-                
+
         except Exception as e:
 
             # Install error
@@ -823,11 +835,11 @@ class ServerUpdater:
 
             return False
 
-        if ver[0] != self.version:
+        if ver[-1] != self.version:
 
             # New version available!
 
-            output("# New Version available! - [Version: {}]".format(ver[0]))
+            output("# New Version available! - [Version: {}]".format(ver[-1]))
             output("[ --== Version check complete! ==-- ]\n")
 
             return True
@@ -846,11 +858,11 @@ class ServerUpdater:
 
             return False
 
-        if build[0] != self.buildnum:
+        if build[-1] != self.buildnum:
 
             # New build available!
 
-            output("# New build available! - [Build: {}]".format(build[0]))
+            output("# New build available! - [Build: {}]".format(build[-1]))
             output("[ --== Version check complete! ==-- ]\n")
 
             return True
@@ -884,9 +896,9 @@ class ServerUpdater:
 
             # User wants latest
 
-            output("# Selecting latest {} - [{}]...".format(name, choice[0]))
+            output("# Selecting latest {} - [{}]...".format(name, choice[-1]))
 
-            val = choice[0]
+            val = choice[-1]
 
             return True, val
 
@@ -1163,7 +1175,7 @@ if __name__ == '__main__':
     file.add_argument('-cf', '--config-file', help='Path to Paper configuration file to read from'
                                                      '(Defaults to [SERVER_JAR_DIR]/version_history.json)')
     file.add_argument('-nb', '--no-backup', help='Disables the backup operating of the old server jar', action='store_true')
-    file.add_argument('-n', '--new', help='Installs a new paper jar instead of updating. Great for configuring a new server install.', 
+    file.add_argument('-n', '--new', help='Installs a new paper jar instead of updating. Great for configuring a new server install.',
                         action='store_true')
     file.add_argument('-o', '--output', help='Name of the new file')
     file.add_argument('-nr', '--no-rename', help='Does not rename the new file', action='store_true')
@@ -1178,7 +1190,7 @@ if __name__ == '__main__':
     parser.add_argument('-q', '--quiet', help="Will only output errors and interactive questions to the terminal",
                         action='store_true')
     parser.add_argument('-V', '--script-version', help='Displays script version', version=__version__, action='version')
-    
+
 
     # Deprecated arguments - Included for compatibility, but do nothing
 
@@ -1229,7 +1241,7 @@ if __name__ == '__main__':
 
         # Already printed it, lets exit
 
-        exit()        
+        exit()
 
     # Checking if we are skipping the update
 
@@ -1245,5 +1257,5 @@ if __name__ == '__main__':
 
         # Allowed to install/Can install
 
-        serv.get_new(default_version=args.version, default_build=args.build, backup=args.no_backup or args.new, 
+        serv.get_new(default_version=args.version, default_build=args.build, backup=args.no_backup or args.new,
                     new=args.new, output_name=name, target_copy=args.copy_old)
