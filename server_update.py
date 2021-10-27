@@ -1,14 +1,13 @@
-from posixpath import basename, dirname
-import sys
+from sys import version_info, stdout
 
 # Before we do ANYTHING, we check to make sure python is the correct version!
 
-if sys.version_info < (3,6,0):
+if version_info < (3,6,0):
 
-    sys.stdout.write("\n--== [ Invalid python version! ] ==--\n")
-    sys.stdout.write("Current version: " + sys.version + '\n')
-    sys.stdout.write("Expected version: 3.6+\n")
-    sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
+    stdout.write("\n--== [ Invalid python version! ] ==--\n")
+    stdout.write("Current version: " + version_info + '\n')
+    stdout.write("Expected version: 3.6+\n")
+    stdout.write("\nPlease install the correct version of python before continuing!\n")
 
     exit()
 
@@ -17,7 +16,6 @@ import urllib.request
 import os
 import shutil
 import json
-import sys
 import traceback
 import argparse
 
@@ -27,14 +25,12 @@ from urllib.error import URLError
 
 """
 A Set of tools to automate the server update process.
-Error philosophy:
- > As long as it is LOGGED or DISPLAYED somewhere for the user to see, it has been handled.
  """
 
 __version__ = '1.4.0'
 
 
-def output(text):
+def output(text: str):
 
     """
     Outputs text to the terminal via print,
@@ -48,13 +44,13 @@ def output(text):
         print(text)
 
 
-def error_report(exc, net=False):
-
+def error_report(exc, net: bool=False):
     """
     Function for displaying error information to the terminal.
 
     :param exc: Exception object
     :param net: Whether to include network information
+    :type net: bool
     """
 
     print("+==================================================+")
@@ -78,6 +74,8 @@ def error_report(exc, net=False):
         print("+==================================================+")
         print("Extra Network Information:")
 
+        print("Attempted URL: {}".format(exc.url))
+
         if hasattr(exc, 'reason'):
 
             print("We failed to reach the server.")
@@ -99,6 +97,13 @@ class Update:
 
     """
     Server updater, handles checking, downloading, and installing.
+
+    This class facilitates communication between this script and the Paper v2 API.
+    We offer methods to retrieve available versions, builds, 
+    and other information about downloads.
+    Users can download the final jar file using this class as well.
+    We also offer the ability to generate download URLs,
+    so the user can download the files in any way they see fit. 
     """
 
     def __init__(self, ver):
@@ -111,12 +116,11 @@ class Update:
              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:43.0) Gecko/20100101 Firefox/43.0',
              'Accept-Language': 'en-US,en;q=0.5',
              'DNT': '1',
-         }  # Request headers for contacting Paper Download API, emulating a Google client
+         }  # Request headers for contacting Paper Download API, emulating a Firefox client
 
         self.download_path = ''  # Path the file was downloaded to
 
     def _progress_bar(self, total, step, end , prefix="", size=60, prog_char="#", empty_char="."):
-
         """
         Outputs a simple progress bar to stdout.
 
@@ -146,23 +150,23 @@ class Update:
 
             if not args.quiet:
 
-                sys.stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
+                stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
                                                            (i*step if i < total - 1 else end), end))
-                sys.stdout.flush()
+                stdout.flush()
 
         # Writing newline, to continue execution
 
         if not args.quiet:
 
-            sys.stdout.write("\n")
-            sys.stdout.flush()
+            stdout.write("\n")
+            stdout.flush()
 
-    def _url_report(self, point):
-
+    def _url_report(self, point: str):
         """
         Reports an error during a request operation.
 
         :param point: Point of failure
+        :type point: str
         """
 
         print("\n+==================================================+")
@@ -172,35 +176,46 @@ class Update:
         print("Your check/update operation will be canceled.")
         print("Detailed error info below:")
 
-    def download(self, path, version, build_num='latest'):
-
+    def build_url(self, version: str, build_num='latest'):
         """
-        Gets file from Paper API, and displays a progress bar.
-        We write to the file specified in chunks, as to not fill up the memory.
+        Builds a valid URL that can be used to download a file.
+        We use the version and build number to generate this URL.
+
+        The user can use this URL to download the file
+        using any method of their choice.
 
         :param version: Version to download
-        :param build_num: Build to download
-        :param path: Path to directory to write to
-        :return: True on success, False on Failure
+        :type version: str
+        :param build_num: Build number to download, defaults to 'latest'
+        :type build_num: str, optional
         """
-
-        output("\n[ --== Starting Download: ==-- ]")
 
         # Get download name
 
         download_name = self._get(version, build_num)
 
-        if download_name is None:
-
-            # Error occurred
-
-            return None
+        # Decode the downloaded data:
 
         download_name = json.loads(download_name.read())['downloads']['application']['name']
 
+        # Build and return the URL:
+
+        return self._base + '/versions/' + str(version) + '/builds/' + str(build_num) + '/downloads/' + str(download_name)
+
+    def download(self, path: str, version: str, build_num='latest'):
+        """
+        Gets file from Paper API, and displays a progress bar.
+        We write to the file specified in chunks, as to not fill up the memory.
+
+        :param path: Path to directory to write to
+        :param version: Version to download
+        :param build_num: Build to download
+        :return: True on success, False on Failure
+        """
+
         # Building URL here:
 
-        url = self._base + '/versions/' + str(version) + '/builds/' + str(build_num) + '/downloads/' + str(download_name)
+        url = self.build_url(version, build_num)
 
         output("URL: {}".format(url))
 
@@ -286,13 +301,14 @@ class Update:
 
         return True
 
-    def _get(self, version=None, build_num=None):
-
+    def _get(self, version: str=None, build_num: int=None):
         """
         Gets RAW data from the Paper API, version info only.
 
         :param version: Version to include in the URL
+        :type version: str
         :param build_num: Build number to include in the URL
+        :type build_num: int
         :return: urllib Request object
         """
 
