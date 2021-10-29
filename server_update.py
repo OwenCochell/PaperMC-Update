@@ -1,14 +1,11 @@
-from io import StringIO
-from json.decoder import JSONDecodeError
 from sys import version_info, stdout
-from typing import Tuple
 
 # Before we do ANYTHING, we check to make sure python is the correct version!
 
 if version_info < (3,6,0):
 
     stdout.write("\n--== [ Invalid python version! ] ==--\n")
-    stdout.write("Current version: " + version_info + '\n')
+    stdout.write("Current version: {}\n".format(version_info))
     stdout.write("Expected version: 3.6+\n")
     stdout.write("\nPlease install the correct version of python before continuing!\n")
 
@@ -25,6 +22,8 @@ import argparse
 from urllib.error import URLError
 from http.client import HTTPResponse
 from hashlib import sha256
+from typing import Tuple
+from json.decoder import JSONDecodeError
 
 
 """
@@ -248,9 +247,58 @@ class Update:
 
         return tuple(final)
 
-    def build_url(self, version: str, build_num:int):
+    def build_data_url(self, version: str=None, build_num: int=None) -> str:
         """
-        Builds a valid URL that can be used to download a file.
+        Builds a valid URL for retrieving version data.
+
+        The user can use this URL to retrieve various versioning data.
+
+        If version and build_num are not specified,
+        then general paper info is returned:
+
+        https://papermc.io/api/v2/projects/paper
+
+        If build_num is not specified, 
+        then general data about the specified data is returned:
+
+        https://papermc.io/api/v2/projects/paper/versions/[version]
+
+        If both arguments are provided,
+        then data about the specific version and build is returned:
+
+        https://papermc.io/api/v2/projects/paper/versions/[version]/builds/[build_num]
+
+        :param version: Version to fetch info for, defaults to None
+        :type version: str, optional
+        :param build_num: Build number to get info for, defaults to None
+        :type build_num: int, optional
+        :return: URL of the data
+        :rtype: str
+        """
+
+        # Building url:
+
+        final = self._base
+
+        if version is not None:
+
+            # Specific version requested:
+
+            final = final + '/versions/' + str(version)
+
+            if build_num is not None:
+
+                # Specific build num requested:
+
+                final = final + '/builds/' + str(build_num)
+
+        # Return the URL:
+
+        return final
+
+    def build_download_url(self, version: str, build_num:int):
+        """
+        Builds a valid download URL that can be used to download a file.
         We use the version and build number to generate this URL.
 
         The user can use this URL to download the file
@@ -264,17 +312,13 @@ class Update:
 
         # Get download name
 
-        download_name = self.get(version, build_num)
-
-        # Decode the downloaded data:
-
-        download_name = json.loads(download_name.read())['downloads']['application']['name']
+        download_name = self.get(version, build_num)['downloads']['application']['name']
 
         # Build and return the URL:
 
         return self._base + '/versions/' + str(version) + '/builds/' + str(build_num) + '/downloads/' + str(download_name)
 
-    def download_object(self, version: str, build_num:int) -> HTTPResponse:
+    def download_response(self, version: str, build_num:int) -> HTTPResponse:
         """
         Calls the underlying urllib library and return the object generated.
 
@@ -290,7 +334,7 @@ class Update:
 
         # Build the URL
 
-        url = self.build_url(version, build_num)
+        url = self.build_download_url(version, build_num)
 
         # Creating request here:
 
@@ -319,13 +363,13 @@ class Update:
         :type build_num: int
         :param check: Boolean determining if we should check the integrity of the file
         :type check: bool
-        :return: True on success, False on Failure
+        :return: Path the file was saved to
         :raises: ValueError: If file integrity check fails
         """
 
         # Get the data:
 
-        data = self.download_url(version, build_num)
+        data = self.download_response(version, build_num)
 
         # Getting content length of download:
 
@@ -337,16 +381,23 @@ class Update:
 
             # Use the default name:
 
-            name = os.path.join(path, data.getheader('content-disposition').split("''")[1])
-            self.download_path = name
-
+            path = os.path.join(path, data.getheader('content-disposition', default='').split("''")[1])
+        
         # Open the file:
 
-        file = open(name, mode='ba')
+        file = open(path, mode='ba')
 
         # Copy the downloaded data to the file:
 
         shutil.copyfileobj(data, file, blocksize)
+
+        # Close the file:
+
+        file.close()
+
+        # Re-open the file for reading:
+
+        file = open(path, mode='rb')
 
         if check:
 
@@ -366,6 +417,8 @@ class Update:
 
         file.close()
 
+        return path
+
     def get_versions(self) -> Tuple[str,...]:
         """
         Gets available versions of the server.
@@ -376,15 +429,9 @@ class Update:
         :return: List of available versions
         """
 
-        # Getting raw data and converting it to JSON format
-
-        data = self.get()
-
-        data = json.loads(data.read())
-
         # Returning version info
 
-        return data['versions']
+        return self.get()['versions']
 
     def get_buildnums(self, version: str) -> Tuple[int,...]:
         """
@@ -399,19 +446,16 @@ class Update:
         :rtype: Tuple[int,...]
         """
 
-        # Getting raw data and converting it to JSON format
+        # Returning build info:
 
-        data = self.get(version=version)
+        return self.get(version)['builds']
 
-        data = json.loads(data.read())
-
-        return data['builds']
-
-    def get(self, version: str=None, build_num: int=None):
+    def get(self, version: str=None, build_num: int=None) -> dict:
         """
         Gets RAW data from the Paper API, version info only.
 
-        We utilise some basic caching to determine how info is saved.
+        We utilise some basic caching to remember responses
+        instead of calling the PaperMC API multiple times. 
 
         You can use this to get a list of valid versions,
         list of valid builds per version,
@@ -424,28 +468,58 @@ class Update:
 
         For more information on PaperMC API formatting.
 
+        We return the data in a dictionary format.
+
         :param version: Version to include in the URL
         :type version: str
         :param build_num: Build number to include in the URL
         :type build_num: int
-        :return: urllib Request object
+        :return: Dictionary of request data
+        :rtype: dict
         """
 
-        # Building url:
+        # Generate URL:
 
-        final = self._base
+        url = self.build_data_url(version, build_num)
 
-        if version is not None:
+        # Check if we have saved content:
 
-            # Specific version requested:
+        if url in self.cache.keys():
 
-            final = final + '/versions/' + str(version)
+            # We have cached content:
 
-            if build_num is not None:
+            return self.cache[url]
 
-                # Specific build num requested:
+        # Get the data and return:
 
-                final = final + '/builds/' + str(build_num)
+        data = json.loads(self._get(version, build_num).read())
+
+        # Cache it:
+
+        self.cache[url] = data
+
+        # Return the final data:
+
+        return data
+
+    def _get(self, version: str=None, build_num: int=None) -> HTTPResponse:
+        """
+        Gets raw data from the PaperMC download API.
+
+        This method generates the relevant URLs and returns
+        the HTTPResponse object representing the request.
+
+        :param version: Version to get info for, defaults to None
+        :type version: str, optional
+        :param build_num: Build to get info for, defaults to None
+        :type build_num: int, optional
+        :return: HTTPResponse representing the request
+        :rtype: HTTPResponse
+        """
+
+        final = self.build_data_url(version, build_num)
+
+        print(final)
 
         # Check if the URL is present in the cache:
 
@@ -497,7 +571,7 @@ class FileUtil:
         Closes created temporary directory.
         """
 
-        self.temp.close()
+        self.temp.cleanup()
 
     def load_config(self, config: str) -> Tuple[str, int]:
         """
@@ -713,14 +787,6 @@ class FileUtil:
 
         output("# Done copying download data to root directory!")
 
-        # Cleaning up temporary directory:
-
-        output("# Cleaning up temporary directory...")
-
-        self.temp.cleanup()
-
-        output("# Done cleaning temporary directory!")
-
         output("[ --== Installation complete! ==-- ]")
 
         return True
@@ -797,7 +863,7 @@ class ServerUpdater:
     Class that binds all server updater classes together
     """
 
-    def __init__(self, path, config_file=None, version='0', build=0, config=True, prompt=True):
+    def __init__(self, path, config_file: str='', version='0', build=0, config=True, prompt=True):
 
         self.version = version  # Version of minecraft server we are running
         self.fileutil = FileUtil(path)  # Fileutility instance
@@ -810,7 +876,7 @@ class ServerUpdater:
 
         self._start(config)
 
-        self.update = Update(self.version)  # Updater Instance
+        self.update = Update()  # Updater Instance
 
     def _start(self, config):
         """
@@ -863,13 +929,7 @@ class ServerUpdater:
 
         ver = self.update.get_versions()
 
-        if ver is None:
-
-            # Error occurred
-
-            return False
-
-        if ver[-1] != self.version:
+        if self.version == '0' or ver[-1] != self.version:
 
             # New version available!
 
@@ -886,7 +946,7 @@ class ServerUpdater:
 
         build = self.update.get_buildnums(self.version)
 
-        if build[-1] != self.buildnum:
+        if self.buildnum == 0 or build[-1] != self.buildnum:
 
             # New build available!
 
@@ -899,49 +959,6 @@ class ServerUpdater:
         output("[ --== Version check complete! ==-- ]\n")
 
         return False
-
-    def _select(self, val, choice, default, name):
-        """
-        Selects a value from the choices.
-        We support updater keywords,
-        like 'latest' and ''.
-
-        :param val: Value entered
-        :param choice: Choices to choose from
-        :param default: Default value
-        :param name: Name of value we are choosing
-        :return: True if valid, false if invalid
-        """
-
-        if val == '':
-
-            # User wants default value:
-
-            val = default
-
-        if val == 'latest':
-
-            # User wants latest
-
-            output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
-
-            val = choice[-1]
-
-            return True, val
-
-        if val not in choice:
-
-            # User selected invalid option
-
-            output("\n# Error: Invalid {} selected!".format(name))
-
-            return False, ''
-
-        # Option selected is valid. Continue
-
-        output("# Selecting {}: [{}] ...".format(name, val))
-
-        return True, val
 
     def version_select(self, default_version='latest', default_build='latest'):
         """
@@ -958,15 +975,7 @@ class ServerUpdater:
 
         output("# Checking version information ...")
 
-        if not self._available_versions:
-
-            # Version information is empty, reloading
-
-            output("# Loading version information ...")
-
-            data = self.update.get_versions()
-
-            self._available_versions = data
+        versions = self.update.get_versions()
 
         if self.prompt:
 
@@ -981,7 +990,7 @@ class ServerUpdater:
 
             # Displaying available versions
 
-            for i in self._available_versions:
+            for i in versions:
 
                 print("  Version: [{}]".format(i))
 
@@ -989,7 +998,7 @@ class ServerUpdater:
 
                 ver = input("\nEnter Version[{}]: ".format(default_version))
 
-                stat, ver = self._select(ver, self._available_versions, default_version, "version")
+                stat, ver = self._select(ver, versions, default_version, "version")
 
                 if stat:
 
@@ -1001,7 +1010,7 @@ class ServerUpdater:
 
             # Just select default version
 
-            stat, ver = self._select('', self._available_versions, default_version, "version")
+            stat, ver = self._select('', versions, default_version, "version")
 
             if not stat:
 
@@ -1128,17 +1137,25 @@ class ServerUpdater:
 
         # Starting download process:
 
-        val = self.update.download(self.fileutil.temp.name, ver, build_num=build)
+        path = self.update.download_file(self.fileutil.temp.name, ver, build_num=build)
 
         # Installing downloaded data:
 
-        val = self.fileutil.install(self.update.download_path, file_name=output_name, backup=backup, new=new, target_copy=target_copy)
+        val = self.fileutil.install(path, file_name=output_name, backup=backup, new=new, target_copy=target_copy)
 
         if not val:
 
             # Install process failed
 
             return
+
+        # Cleaning up temporary directory:
+
+        output("# Cleaning up temporary directory...")
+
+        self.fileutil.close_temp_dir()
+
+        output("# Done cleaning temporary directory!")
 
         output("\nUpdate complete!")
 
@@ -1148,6 +1165,49 @@ class ServerUpdater:
         self.buildnum = build
 
         return
+
+    def _select(self, val, choice, default, name):
+        """
+        Selects a value from the choices.
+        We support updater keywords,
+        like 'latest' and ''.
+
+        :param val: Value entered
+        :param choice: Choices to choose from
+        :param default: Default value
+        :param name: Name of value we are choosing
+        :return: True if valid, false if invalid
+        """
+
+        if val == '':
+
+            # User wants default value:
+
+            val = default
+
+        if val == 'latest':
+
+            # User wants latest
+
+            output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
+
+            val = choice[-1]
+
+            return True, val
+
+        if val not in choice:
+
+            # User selected invalid option
+
+            output("\n# Error: Invalid {} selected!".format(name))
+
+            return False, ''
+
+        # Option selected is valid. Continue
+
+        output("# Selecting {}: [{}] ...".format(name, val))
+
+        return True, val
 
 
 if __name__ == '__main__':
@@ -1169,7 +1229,7 @@ if __name__ == '__main__':
     version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default='latest')
     version.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0')
     version.add_argument('-ib', help='Sets the currently installed server build, ignores config', default=0)
-    version.add_argument('-sv', '--server-version', help="Displays server version from configuration file", action='store_true')
+    version.add_argument('-sv', '--server-version', help="Displays server version from configuration file and exits", action='store_true')
 
     # +===========================================+
     # File command line arguments:
@@ -1179,11 +1239,11 @@ if __name__ == '__main__':
     file.add_argument('-nlc', '--no-load-config', help='Will not load Paper version config', action='store_false')
     file.add_argument('-cf', '--config-file', help='Path to Paper configuration file to read from'
                                                      '(Defaults to [SERVER_JAR_DIR]/version_history.json)')
-    file.add_argument('-nb', '--no-backup', help='Disables the backup operating of the old server jar', action='store_true')
-    file.add_argument('-n', '--new', help='Installs a new paper jar instead of updating. Great for configuring a new server install.',
+    file.add_argument('-nb', '--no-backup', help='Disables backup of the old server jar', action='store_true')
+    file.add_argument('-n', '--new', help='Installs a new paper jar instead of updating. Great for configuring a new server install',
                         action='store_true')
     file.add_argument('-o', '--output', help='Name of the new file')
-    file.add_argument('-nr', '--no-rename', help='Does not rename the new file', action='store_true')
+    file.add_argument('-nr', '--no-rename', help='Does not rename the new file, uses default jar name', action='store_true')
     file.add_argument('-co', '--copy-old', help='Copies the old file to a new location')
     
     # +===========================================+
@@ -1265,3 +1325,4 @@ if __name__ == '__main__':
 
         serv.get_new(default_version=args.version, default_build=args.build, backup=args.no_backup or args.new,
                     new=args.new, output_name=name, target_copy=args.copy_old)
+
