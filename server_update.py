@@ -1,4 +1,7 @@
+from io import StringIO
+from json.decoder import JSONDecodeError
 from sys import version_info, stdout
+from typing import Tuple
 
 # Before we do ANYTHING, we check to make sure python is the correct version!
 
@@ -19,15 +22,56 @@ import json
 import traceback
 import argparse
 
-from math import ceil
 from urllib.error import URLError
+from http.client import HTTPResponse
+from hashlib import sha256
 
 
 """
 A Set of tools to automate the server update process.
- """
+"""
 
 __version__ = '1.4.0'
+
+
+def load_config(config: str) -> Tuple[str, int]:
+    """
+    Loads configuration data from the given file.
+
+    We only load version info if it's in the official format!
+    We return the version and build number found in the configuration file.
+
+    :param config: Path to config file
+    :type config: str
+    :return: Tuple contaning version and build data respectively
+    :rtype: Tuple[str, int]
+    """
+
+    # Exists and is file, read it
+
+    file = open(config, 'r')
+
+    data = json.load(file)
+
+    # Read the data, and attempt to pull some info out of it
+
+    current = data['currentVersion']
+
+    # Splitting the data in two so we can pull some content out:
+
+    build, version = current.split(" ", 1)
+
+    # Getting build information:
+
+    build = int(build.split("-")[-1])
+
+    # Getting version information:
+
+    version = version[5:-1]
+
+    # Returning version information:
+
+    return version, build
 
 
 def output(text: str):
@@ -94,7 +138,6 @@ def error_report(exc, net: bool=False):
 
 
 class Update:
-
     """
     Server updater, handles checking, downloading, and installing.
 
@@ -106,9 +149,8 @@ class Update:
     so the user can download the files in any way they see fit. 
     """
 
-    def __init__(self, ver):
+    def __init__(self):
 
-        self.ver = ver  # Version of the minecraft server we are currently using.
         self._base = 'https://papermc.io/api/v2/projects/paper'  # Base URL to build of off
         self._headers = {
              'Content-Type': 'application/json;charset=UTF-8',
@@ -119,6 +161,8 @@ class Update:
          }  # Request headers for contacting Paper Download API, emulating a Firefox client
 
         self.download_path = ''  # Path the file was downloaded to
+
+        self.cache = {}  # A basic cache for saving responses
 
     def _progress_bar(self, total, step, end , prefix="", size=60, prog_char="#", empty_char="."):
         """
@@ -176,7 +220,35 @@ class Update:
         print("Your check/update operation will be canceled.")
         print("Detailed error info below:")
 
-    def build_url(self, version: str, build_num='latest'):
+    def version_convert(self, ver: str) -> Tuple[int,int,int]:
+        """
+        Converts the version string into a tuple that can be used for comparison.
+
+        This tuple contains three numbers, each of which can be used
+        in equality operations.
+        This can be used to determine if a given version is greater or lessor than another.
+
+        :param ver: Version string to convert
+        :type ver: str
+        :return: Tuple contaning version information
+        :rtype: Tuple[int,int,int]
+        """
+
+        # Convert and return the tuple:
+
+        final = []
+
+        for item in ver.split('.'):
+
+            # Convert and add the item:
+
+            final.append(int(item))
+
+        # Return the final tuple:
+
+        return tuple(final)
+
+    def build_url(self, version: str, build_num:int):
         """
         Builds a valid URL that can be used to download a file.
         We use the version and build number to generate this URL.
@@ -192,7 +264,7 @@ class Update:
 
         # Get download name
 
-        download_name = self._get(version, build_num)
+        download_name = self.get(version, build_num)
 
         # Decode the downloaded data:
 
@@ -202,22 +274,23 @@ class Update:
 
         return self._base + '/versions/' + str(version) + '/builds/' + str(build_num) + '/downloads/' + str(download_name)
 
-    def download(self, path: str, version: str, build_num='latest'):
+    def download_object(self, version: str, build_num:int) -> HTTPResponse:
         """
-        Gets file from Paper API, and displays a progress bar.
-        We write to the file specified in chunks, as to not fill up the memory.
+        Calls the underlying urllib library and return the object generated.
 
-        :param path: Path to directory to write to
-        :param version: Version to download
-        :param build_num: Build to download
-        :return: True on success, False on Failure
+        This object is usually a HTTPResponse object.
+        The user can use this object in any way they see fit.
+        We automatically generate the URL using the version and build_num given.
+
+        :param url: URL of file to download
+        :type url: str
+        :return: Object returned by urllib
+        :rtype: HTTPResponse
         """
 
-        # Building URL here:
+        # Build the URL
 
         url = self.build_url(version, build_num)
-
-        output("URL: {}".format(url))
 
         # Creating request here:
 
@@ -225,85 +298,131 @@ class Update:
 
         # Sending request to Paper API
 
-        try:
+        return urllib.request.urlopen(req)
 
-            data = urllib.request.urlopen(req)
+    def download_file(self, path: str, version: str, build_num:int, check:bool=True):
+        """
+        Donloads the content to the given external file.
+        We handle all file operations,
+        and automatically work with the URLResponse objects
+        to write the file contents to an external file.
 
-        except URLError as e:
+        If a directory is provided, 
+        then we will use the recommended name of the file,
+        and save it to the directory provided.
 
-            self._url_report("File Download")
+        :param path: Path to directory to write to
+        :type path: str
+        :param version: Version to download
+        :type version: str
+        :param build_num: Build to download
+        :type build_num: int
+        :param check: Boolean determining if we should check the integrity of the file
+        :type check: bool
+        :return: True on success, False on Failure
+        :raises: ValueError: If file integrity check fails
+        """
 
-            # Network error occurred
+        # Get the data:
 
-            error_report(e, net=True)
-
-            return False
+        data = self.download_url(version, build_num)
 
         # Getting content length of download:
 
-        length = int(data.getheader('content-length'))
         blocksize = 4608
-
-        output("Download Size: {}".format(length))
 
         # Get filename for download:
 
-        name = os.path.join(path, data.getheader('content-disposition').split('=')[1])
-        self.download_path = name
+        if os.path.isdir(path):
+
+            # Use the default name:
+
+            name = os.path.join(path, data.getheader('content-disposition').split("''")[1])
+            self.download_path = name
+
+        # Open the file:
 
         file = open(name, mode='ba')
 
-        # Using progress bar to visualize download:
+        # Copy the downloaded data to the file:
 
-        try:
+        shutil.copyfileobj(data, file, blocksize)
 
-            for i in self._progress_bar(ceil(length/blocksize) + 1, blocksize, length, prefix='Downloading:'):
+        if check:
 
-                # Getting blocksize data:
+            # Get the ideal SHA256 hash for the file:
 
-                byts = data.read(blocksize)
+            hash = self.get(version, build_num)['downloads']['application']['sha256']
 
-                # Writing data to file:
+            # Checking integrity:
 
-                file.write(byts)
+            if not sha256(file.read()).hexdigest() == hash:
 
-        except URLError as e:
+                # File integrity failed! Do something...
 
-            self._url_report("File Download")
-
-            # Report the error
-
-            error_report(e, net=True)
-
-            file.close()
-
-            return False
-
-        except Exception as e:
-
-            self._url_report("File Download")
-
-            # Report the error
-
-            error_report(e)
-
-            file.close()
-
-            return False
+                raise ValueError("File integrity check failed!")
 
         # Closing file:
 
         file.close()
 
-        # Done downloading
+    def get_versions(self) -> Tuple[str,...]:
+        """
+        Gets available versions of the server.
 
-        output("[ --== Download Complete! ==-- ]")
+        The list of versions is a tuple of strings.
+        Each version follows the Minecraft game version conventions.
 
-        return True
+        :return: List of available versions
+        """
 
-    def _get(self, version: str=None, build_num: int=None):
+        # Getting raw data and converting it to JSON format
+
+        data = self.get()
+
+        data = json.loads(data.read())
+
+        # Returning version info
+
+        return data['versions']
+
+    def get_buildnums(self, version: str) -> Tuple[int,...]:
+        """
+        Gets available build for a particular version.
+
+        The builds are a tuple of ints,
+        which follow PaperMC build number conventions.
+
+        :param version: Version to get builds for
+        :type version: str
+        :return: List of builds
+        :rtype: Tuple[int,...]
+        """
+
+        # Getting raw data and converting it to JSON format
+
+        data = self.get(version=version)
+
+        data = json.loads(data.read())
+
+        return data['builds']
+
+    def get(self, version: str=None, build_num: int=None):
         """
         Gets RAW data from the Paper API, version info only.
+
+        We utilise some basic caching to determine how info is saved.
+
+        You can use this to get a list of valid versions,
+        list of valid builds per version,
+        as well as general data related to the selected version.
+
+        You should check out:
+
+        https://paper.readthedocs.io/en/latest/site/api.html
+        https://papermc.io/api/docs/swagger-ui/index.html?configUrl=/api/openapi/swagger-config#/
+
+        For more information on PaperMC API formatting.
 
         :param version: Version to include in the URL
         :type version: str
@@ -328,86 +447,30 @@ class Update:
 
                 final = final + '/builds/' + str(build_num)
 
+        # Check if the URL is present in the cache:
+
+        if final in self.cache.keys():
+
+            # Cached content is found, return THAT:
+
+            return self.cache[final]
+
         # Creating request here:
 
         req = urllib.request.Request(final, headers=self._headers)
 
         # Getting data:
 
-        try:
+        data = urllib.request.urlopen(req)
 
-            data = urllib.request.urlopen(req)
+        # Saving data:
 
-        except Exception as e:
-
-            self._url_report("API Fetch Operation")
-
-            # Exception occurred, handel it
-
-            error_report(e, net=True)
-
-            return None
+        self.cache[final] = data
 
         return data
 
-    def get_versions(self):
-
-        """
-        Gets available versions of the server.
-
-        :return: List of available versions
-        """
-
-        # Getting raw data and converting it to JSON format
-
-        output("  > Fetching and decoding version info...")
-
-        data = self._get()
-
-        if data is None:
-
-            # Error occurred
-
-            return None
-
-        data = json.loads(data.read())
-
-        # Returning version info
-
-        output("  > Done fetching version information!")
-
-        return data['versions']
-
-    def get_buildnums(self, version):
-
-        """
-        Gets available build for a particular version.
-
-        :param version: Version to get builds for
-        :return: List of builds
-        """
-
-        # Getting raw data and converting it to JSON format
-
-        output("  > Fetching and decoding build info...")
-
-        data = self._get(version=version)
-
-        if data is None:
-
-            # Error occurred
-
-            return None
-
-        data = json.loads(data.read())
-
-        output("  > Done fetching build info!")
-
-        return data['builds']
-
 
 class FileUtil:
-
     """
     Class for managing the creating/deleting/moving of server files.
     """
@@ -419,7 +482,6 @@ class FileUtil:
         self.config_default = 'version_history.json'  # Default name of paper versioning file
 
     def create_temp_dir(self):
-
         """
         Creates a temporary directory.
 
@@ -431,85 +493,48 @@ class FileUtil:
         return self.temp
 
     def close_temp_dir(self):
-
         """
         Closes created temporary directory.
         """
 
         self.temp.close()
 
-    def load_config(self, config):
-
+    def load_config(self, config: str) -> Tuple[str, int]:
         """
         Loads configuration info from 'version.json' in the server directory
         We only load version info if it's in the official format!
+
+        :param config: Path to config file
+        :type config: str
+        :return: Configuration info from file
+        :rtype: Tuple[str, int]
         """
 
         config = (config if config is not None else os.path.join(os.path.dirname(self.path), self.config_default))
 
-        output("# Checking configuration file at [{}] ...".format(config))
+        output("# Loading configuration data from file [{}] ...".format(config))
 
         if os.path.isfile(config):
 
-            # Exists and is file, read it
-
-            output("# Loading configuration data ...")
-
             try:
 
-                file = open(config, 'r')
+                return load_config(config)
 
-                data = json.load(file)
+            except JSONDecodeError:
 
-            except Exception as e:
+                # Data not in valid JSON format.
 
-                # Failed to load config data - not in JSON format
-
-                print("# Failed to load config data - Not in JSON format!")
+                output("# Failed to load config data - Not in JSON format!")
 
                 return '0', 0
 
-            # Read the data, and attempt to pull some info out of it
+            except Exception:
 
-            current = data['currentVersion']
+                # Extra weird errors due to formatting issues:
 
-            if type(current) != str:
-
-                # We only accept strings:
-
-                print("# Failed to load config data - We want strings, not {}!".format(type(current)))
+                output("# Failed to load config data - Strange format, we support official builds only!")
 
                 return '0', 0
-
-            # Catch any exceptions due to weird format conventions:
-
-            try:
-
-                # Splitting the data in two so we can pull some content out:
-
-                build, version = current.split(" ", 1)
-
-                # Getting build information:
-
-                build = int(build.split("-")[-1])
-
-                # Getting version information:
-
-                version = version[5:-1]
-
-            except Exception as e:
-
-                # Weird file content. Unable to get info.
-
-                print("# Unable to load config data - Invalid Format, we support official builds only!")
-
-                return '0', 0
-
-            # Returning version information:
-
-            output("# Done loading configuration data! ")
-
-            return version, build
 
         else:
 
@@ -534,8 +559,7 @@ class FileUtil:
 
         return
 
-    def install(self, file_path: str, target_copy: str=None, file_name: str=None, backup=True, new=False, no_delete=True):
-
+    def install(self, file_path: str, target_copy: str=None, file_name: str=None, backup=True, new=False):
         """
         "Installs" the contents of the temporary file into the target in the root server directory.
 
@@ -555,7 +579,6 @@ class FileUtil:
         :type backup: bool
         :param new: Determines if we are doing a new install, aka if we care about file operation errors
         :type new: bool
-        :param no_delete: Boolean determining if we should delete the old file
         """
 
         # Resolve output filename:
@@ -703,7 +726,6 @@ class FileUtil:
         return True
 
     def _recover_backup(self):
-
         """
         Attempts to recover the backup of the old server jar file.
         """
@@ -775,7 +797,7 @@ class ServerUpdater:
     Class that binds all server updater classes together
     """
 
-    def __init__(self, path, config_file=None, version='0', build=0, config=True, prompt=True, regex=None):
+    def __init__(self, path, config_file=None, version='0', build=0, config=True, prompt=True):
 
         self.version = version  # Version of minecraft server we are running
         self.fileutil = FileUtil(path)  # Fileutility instance
@@ -791,7 +813,6 @@ class ServerUpdater:
         self.update = Update(self.version)  # Updater Instance
 
     def _start(self, config):
-
         """
         Starts the object, loads configuration.
         """
@@ -819,7 +840,6 @@ class ServerUpdater:
         return
 
     def report_version(self):
-
         """
         Outputs the current server version and build to the terminal.
         """
@@ -829,7 +849,6 @@ class ServerUpdater:
         output("  > Build: [{}]".format(self.buildnum))
 
     def check(self):
-
         """
         Checks if a new version is available.
 
@@ -867,12 +886,6 @@ class ServerUpdater:
 
         build = self.update.get_buildnums(self.version)
 
-        if build is None:
-
-            # Error occurred
-
-            return False
-
         if build[-1] != self.buildnum:
 
             # New build available!
@@ -888,7 +901,6 @@ class ServerUpdater:
         return False
 
     def _select(self, val, choice, default, name):
-
         """
         Selects a value from the choices.
         We support updater keywords,
@@ -911,7 +923,7 @@ class ServerUpdater:
 
             # User wants latest
 
-            output("# Selecting latest {} - [{}]...".format(name, choice[-1]))
+            output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
 
             val = choice[-1]
 
@@ -927,12 +939,11 @@ class ServerUpdater:
 
         # Option selected is valid. Continue
 
-        output("# Selecting {}: [{}]...".format(name, val))
+        output("# Selecting {}: [{}] ...".format(name, val))
 
         return True, val
 
     def version_select(self, default_version='latest', default_build='latest'):
-
         """
         Prompts the user to select a version to download,
         and checks input against values from Paper API.
@@ -945,21 +956,15 @@ class ServerUpdater:
 
         # Checking if we have version information:
 
-        output("# Checking version information...")
+        output("# Checking version information ...")
 
         if not self._available_versions:
 
             # Version information is empty, reloading
 
-            output("# Loading version information...")
+            output("# Loading version information ...")
 
             data = self.update.get_versions()
-
-            if data is None:
-
-                # Error occurred
-
-                return None, None
 
             self._available_versions = data
 
@@ -1008,15 +1013,9 @@ class ServerUpdater:
 
         # Getting build info
 
-        output("# Loading build information...")
+        output("# Loading build information ...")
 
         nums = self.update.get_buildnums(ver)
-
-        if nums is None:
-
-            # Error occurred:
-
-            return None, None
 
         if self.prompt:
 
@@ -1072,7 +1071,6 @@ class ServerUpdater:
         return ver, build
 
     def get_new(self, default_version='latest', default_build='latest', backup=True, new=False, target_copy=None, output_name=None):
-
         """
         Downloads and installs the new version,
         Prompts the user to select a specific version.
@@ -1132,14 +1130,6 @@ class ServerUpdater:
 
         val = self.update.download(self.fileutil.temp.name, ver, build_num=build)
 
-        if not val:
-
-            # Download process failed
-
-            return
-
-        # Download process complete!
-
         # Installing downloaded data:
 
         val = self.fileutil.install(self.update.download_path, file_name=output_name, backup=backup, new=new, target_copy=target_copy)
@@ -1195,6 +1185,7 @@ if __name__ == '__main__':
     file.add_argument('-o', '--output', help='Name of the new file')
     file.add_argument('-nr', '--no-rename', help='Does not rename the new file', action='store_true')
     file.add_argument('-co', '--copy-old', help='Copies the old file to a new location')
+    
     # +===========================================+
     # General command line arguments:
 
