@@ -351,82 +351,14 @@ so be warned.
 # Conclusion
 
 This script provides a simple method to check/download/install PaperMC server updates. You can add your command to the 
-beginning of your start file, to ensure that you are always running the latest server version. 
-If you are hosting a server for a friend/customer, you can use this script to manage the updating process for them, 
+beginning of your start file, to ensure that you are always running the latest server version.
+If you are hosting a server for a friend/customer, you can use this script to manage the update/install process for them, 
 so they don't have to.
 
-# Changelog 
+# Changelog
 
-## 1.4.0
-
-  Features Added:
-
-    - Added support for the PaperMC v2 API, the usage of the script remains unchanged
-
-## 1.3.0
-
-  Bug Fixes:
-
-   - Fixed huge bug where script would crash due to a missing argparse argument
-   - Fixed bug where if file copy failed during install, the script would continue instead of exit
-
-  Features added:
-
-   - User can now specify output name of new file
-   - User can now copy old file to a separate location before the update process
-   - Script now uses recommended paper name if another name is not specified
-
-  Other Fixes:
-
-   - Added a section to the readme explaining how to handle filenames
-   - Added some examples demonstrating the new command line arguments
-
-## 1.2.1
-
-  Bug Fixes:
-
-   - Added a version check to the start of the script, which exit if the python version is below 3.6
-   - When checking script version with '-V', we now display the version and exit instead raising an error
-
-  Other Fixes:
-
-   - Added a section to the readme explaining python versions and how to manually specify them
-   - Added some missing command line arguments to the readme
-   - Moved '--server-version' argument to the 'version' group in argparse
-
-## 1.2.0
-
-  Bug Fixes:
-
-  - Fixed an issue where the script would always determine that an update is necessary due to a type mismatch
-  - Fixed an issue in the interactive menu when selecting the build where no input would be valid, also a type mismatch
-
-  Features Added:
-
-  - '--no-backup' argument for disabling the backup operation
-  - '-V' argument for displaying script version and exiting
-  - '--server-version' argument for displaying the server version and exiting
-  - '--new' argument for skipping update operations and downloading a paper jar at the given location
-
-  Other Fixes:
-
-  - Added grouping to argparse, so the help menu should feel less cluttered
-  - Cleaned up the formatting of all docstrings
-  - Changed the wording in code comments
-  - Fixed many typos
-
-## 1.1.0
-
-  - Added command line option '-q' for quiet output
-  - Fixed typos/output issues
-  - Can read config files in custom locations
-
-## 1.0.0
-
-  - Initial version
-  - Added support for reading configuration info directly from the paper versioning file
-  - Removed old command line options  
-  - Fixed some issues with selecting version
+The changelog has moved to CHANGELOG.md.
+All current and future changes will be kept in that location.
 
 # Special Thanks
 

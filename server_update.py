@@ -22,15 +22,16 @@ import argparse
 from urllib.error import URLError
 from http.client import HTTPResponse
 from hashlib import sha256
-from typing import Tuple
+from typing import Callable, List, Tuple
 from json.decoder import JSONDecodeError
+from math import ceil
 
 
 """
 A Set of tools to automate the server update process.
 """
 
-__version__ = '1.4.0'
+__version__ = '2.0.0'
 
 
 def load_config(config: str) -> Tuple[str, int]:
@@ -117,7 +118,10 @@ def error_report(exc, net: bool=False):
         print("+==================================================+")
         print("Extra Network Information:")
 
-        print("Attempted URL: {}".format(exc.url))
+
+        if hasattr(exc, 'url'):
+
+            print("Attempted URL: {}".format(exc.url))
 
         if hasattr(exc, 'reason'):
 
@@ -134,6 +138,51 @@ def error_report(exc, net: bool=False):
     print("Please check the github page for more info: https://github.com/Owen-Cochell/PaperMC-Update.")
 
     return
+
+
+def progress_bar(length: int, stepsize: int, total_steps: int, step: int, prefix: str="Downloading:", size: int=60, prog_char: str="#", empty_char: str="."):
+    """
+    Outputs a simple progress bar to stdout.
+
+    We act as a generator, continuing to iterate and add to the bar progress
+    as we download more information.
+
+    :param legnth: Length of data to download
+    :type length: int
+    :param stepsize: Size of each step
+    :type stepsize: int
+    :param total_steps: Total number of steps
+    :type total_steps: int
+    :param step: Step number we are on
+    :type step: int
+    :param prefix: Prefix to use for the progress bar
+    :type prefix: str
+    :param size: Number of characters on the progress bar
+    :type size: int
+    :param prog_char: Character to use for progress
+    :type prog_char: str
+    :param empty_char: Character to use for empty progress
+    :type empty_char: str
+    """
+
+    # Calculate number of '#' to render:
+
+    x = int(size*(step+1)/total_steps)
+
+    # Rendering progress bar:
+
+    if not args.quiet:
+
+        stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
+                                                        (step*stepsize if step < total_steps - 1 else length), length))
+        stdout.flush()
+
+    # Writing newline, to continue execution
+
+    if total_steps <= step:
+
+        stdout.write("\n")
+        stdout.flush()
 
 
 class Update:
@@ -163,61 +212,12 @@ class Update:
 
         self.cache = {}  # A basic cache for saving responses
 
-    def _progress_bar(self, total, step, end , prefix="", size=60, prog_char="#", empty_char="."):
+    def _none_function(*args, **kwargs):
         """
-        Outputs a simple progress bar to stdout.
-
-        We act as a generator, continuing to iterate and add to the bar progress
-        as we download more information.
-
-        :param total: Total amount of computations
-        :param step: Amount to increase the counter by
-        :param end:  Number to end on
-        :param prefix: What to show before the progress bar
-        :param size: Size of the progress bar
+        Dummy function that does nothing.
         """
 
-        # Iterating over the total number of iterations:
-
-        for i in range(total):
-
-            # Yield i
-
-            yield i
-
-            # Calculate number of '#' to render:
-
-            x = int(size*(i+1)/total)
-
-            # Rendering progress bar:
-
-            if not args.quiet:
-
-                stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
-                                                           (i*step if i < total - 1 else end), end))
-                stdout.flush()
-
-        # Writing newline, to continue execution
-
-        if not args.quiet:
-
-            stdout.write("\n")
-            stdout.flush()
-
-    def _url_report(self, point: str):
-        """
-        Reports an error during a request operation.
-
-        :param point: Point of failure
-        :type point: str
-        """
-
-        print("\n+==================================================+")
-        print("> !ATTENTION! >")
-        print("An error occurred during a request operation.")
-        print("Fail Point: {}".format(point))
-        print("Your check/update operation will be canceled.")
-        print("Detailed error info below:")
+        pass
 
     def version_convert(self, ver: str) -> Tuple[int,int,int]:
         """
@@ -344,7 +344,7 @@ class Update:
 
         return urllib.request.urlopen(req)
 
-    def download_file(self, path: str, version: str, build_num:int, check:bool=True):
+    def download_file(self, path: str, version: str, build_num:int, check:bool=True, call: Callable=None, args: List=None) -> str:
         """
         Donloads the content to the given external file.
         We handle all file operations,
@@ -355,6 +355,11 @@ class Update:
         then we will use the recommended name of the file,
         and save it to the directory provided.
 
+        Users can also pass a function to be called upon each block of the download.
+        This can be useful to visualize or track downloads.
+        We will pass the total length, stepsize, total steps, and step number.
+        The args provided in the args parameters will be passed to the function as well.
+
         :param path: Path to directory to write to
         :type path: str
         :param version: Version to download
@@ -363,9 +368,22 @@ class Update:
         :type build_num: int
         :param check: Boolean determining if we should check the integrity of the file
         :type check: bool
+        :param call: Method to call upon each download iteration
+        :type call: Callable
+        :param args: Args to pass to the callable
+        :type args: List
         :return: Path the file was saved to
         :raises: ValueError: If file integrity check fails
         """
+
+        if args is None:
+
+            args = []
+
+        if call is None:
+
+            call = self._none_function
+            args = []
 
         # Get the data:
 
@@ -382,14 +400,27 @@ class Update:
             # Use the default name:
 
             path = os.path.join(path, data.getheader('content-disposition', default='').split("''")[1])
-        
+
+        # Get length of file:
+
+        length = int(data.getheader('content-length'))
+        total = ceil(length/blocksize) + 1
+
         # Open the file:
 
         file = open(path, mode='ba')
 
         # Copy the downloaded data to the file:
 
-        shutil.copyfileobj(data, file, blocksize)
+        for i in range(total):
+
+            # Call the method:
+
+            call(length, blocksize, total, i, *args)
+
+            # Get the data:
+
+            file.write(data.read(blocksize))
 
         # Close the file:
 
@@ -519,8 +550,6 @@ class Update:
 
         final = self.build_data_url(version, build_num)
 
-        print(final)
-
         # Check if the URL is present in the cache:
 
         if final in self.cache.keys():
@@ -549,7 +578,7 @@ class FileUtil:
     Class for managing the creating/deleting/moving of server files.
     """
 
-    def __init__(self, path, config=None):
+    def __init__(self, path):
 
         self.path: str = os.path.abspath(path)  # Path to working directory
         self.temp: tempfile.TemporaryDirectory  # Tempdir instance
@@ -633,7 +662,7 @@ class FileUtil:
 
         return
 
-    def install(self, file_path: str, target_copy: str=None, file_name: str=None, backup=True, new=False):
+    def install(self, file_path: str, new_path: str, target_copy: str=None, backup=True, new=False):
         """
         "Installs" the contents of the temporary file into the target in the root server directory.
 
@@ -645,6 +674,8 @@ class FileUtil:
 
         :param file_path: The path to the new file to install
         :type new_file: str
+        :param new_path: Path to install the file to
+        :type new_path: str
         :param target_copy: Where to copy the old file to
         :type target_copy: str
         :param file_name: What to rename the new file to, None for no change
@@ -654,12 +685,6 @@ class FileUtil:
         :param new: Determines if we are doing a new install, aka if we care about file operation errors
         :type new: bool
         """
-
-        # Resolve output filename:
-
-        if file_name is None:
-
-            file_name = os.path.basename(file_path)
 
         output("\n[ --== Installation: ==-- ]")
 
@@ -751,19 +776,11 @@ class FileUtil:
         try:
 
             output("# Copying download data to root directory ...")
-            output("# ({} > {})".format(file_path, os.path.join(os.path.dirname(self.path), file_name)))
+            output("# ({} > {})".format(file_path, os.path.join(os.path.dirname(self.path), new_path)))
 
-            if file_name is None:
+            # Copy to the new directory with the given name:
 
-                # Do not rename the downloaded file!
-
-                shutil.copy(file_path, os.path.dirname(self.path))
-
-            else:
-
-                # Copy to the new directory with the given name:
-
-                shutil.copyfile(file_path, os.path.join(os.path.dirname(self.path), file_name))
+            shutil.copyfile(file_path, os.path.join(os.path.dirname(self.path), new_path))
 
         except Exception as e:
 
@@ -863,14 +880,14 @@ class ServerUpdater:
     Class that binds all server updater classes together
     """
 
-    def __init__(self, path, config_file: str='', version='0', build=0, config=True, prompt=True):
+    def __init__(self, path, config_file: str='', version='0', build=-1, config=True, prompt=True, integrity=True):
 
         self.version = version  # Version of minecraft server we are running
-        self.fileutil = FileUtil(path)  # Fileutility instance
         self.buildnum = build  # Buildnum of the current server
-        self._available_versions = []  # List of available versions
+        self.fileutil = FileUtil(path)  # Fileutility instance
         self.prompt = prompt  # Whether to prompt the user for version selection
         self.config_file = config_file  # Name of the config file we pull version info from
+        self.no_integrity = integrity  # Boolean determining if we should run an integrity check
 
         # Starting object
 
@@ -914,10 +931,14 @@ class ServerUpdater:
         output("  > Version: [{}]".format(self.version))
         output("  > Build: [{}]".format(self.buildnum))
 
-    def check(self):
+    def check(self, default_version: str, default_build: int):
         """
         Checks if a new version is available.
 
+        :param default_version: Default version to install
+        :type default_version: str
+        :param default_build: Default build to install
+        :type default_build: int
         :return: True is new version, False if not/error
         """
 
@@ -925,11 +946,35 @@ class ServerUpdater:
 
         # Checking for new server version
 
-        output("# Comparing local <> remote server versions...")
+        output("Loading version information ...")
 
-        ver = self.update.get_versions()
+        try:
 
-        if self.version == '0' or ver[-1] != self.version:
+            ver = self.update.get_versions()
+
+        except URLError as e:
+
+            self._url_report("API Fetch Operation")
+
+            # Report the error
+
+            error_report(e, net=True)
+
+            return False
+
+        except Exception as e:
+
+            self._url_report("API Fetch Operation")
+
+            # Report the error
+
+            error_report(e)
+
+            return False
+
+        output("# Comparing local <> remote server versions ...")
+
+        if self.version != self._select(default_version, ver, 'latest', 'version', print=False)[1] and (self.version == '0' or ver[-1] != self.version):
 
             # New version available!
 
@@ -942,11 +987,35 @@ class ServerUpdater:
 
         # Checking builds
 
-        output("# Comparing local <> remote builds...")
+        output("# Loading build information ...")
 
-        build = self.update.get_buildnums(self.version)
+        try:
 
-        if self.buildnum == 0 or build[-1] != self.buildnum:
+            build = self.update.get_buildnums(self.version)
+
+        except URLError as e:
+
+            self._url_report("File Download")
+
+            # Report the error
+
+            error_report(e, net=True)
+
+            return False
+
+        except Exception as e:
+
+            self._url_report("File Download")
+
+            # Report the error
+
+            error_report(e)
+
+            return False
+
+        output("# Comparing local <> remote builds ...")
+
+        if self.buildnum != self._select(default_build, build, 'latest', 'buildnum', print=False)[1] and (self.buildnum == 0 or build[-1] != self.buildnum):
 
             # New build available!
 
@@ -973,9 +1042,31 @@ class ServerUpdater:
 
         # Checking if we have version information:
 
-        output("# Checking version information ...")
+        output("# Loading version information ...")
 
-        versions = self.update.get_versions()
+        try:
+
+            versions = self.update.get_versions()
+
+        except URLError as e:
+
+            self._url_report("API Fetch Operation")
+
+            # Report the error
+
+            error_report(e, net=True)
+
+            return False
+
+        except Exception as e:
+
+            self._url_report("API Fetch Operation")
+
+            # Report the error
+
+            error_report(e)
+
+            return False
 
         if self.prompt:
 
@@ -1024,7 +1115,29 @@ class ServerUpdater:
 
         output("# Loading build information ...")
 
-        nums = self.update.get_buildnums(ver)
+        try:
+
+            nums = self.update.get_buildnums(ver)
+
+        except URLError as e:
+
+            self._url_report("API Fetch Operation")
+
+            # Report the error
+
+            error_report(e, net=True)
+
+            return False
+
+        except Exception as e:
+
+            self._url_report("API Fetch Operation")
+
+            # Report the error
+
+            error_report(e)
+
+            return False
 
         if self.prompt:
 
@@ -1137,11 +1250,53 @@ class ServerUpdater:
 
         # Starting download process:
 
-        path = self.update.download_file(self.fileutil.temp.name, ver, build_num=build)
+        output("\n[ --== Starting Download: ==-- ]")
 
-        # Installing downloaded data:
+        try:
 
-        val = self.fileutil.install(path, file_name=output_name, backup=backup, new=new, target_copy=target_copy)
+            path = self.update.download_file(self.fileutil.temp.name, ver, build_num=build, call=progress_bar, check=self.integrity)
+
+        except URLError as e:
+
+            self._url_report("File Download")
+
+            # Report the error
+
+            error_report(e, net=True)
+
+            return False
+
+        except Exception as e:
+
+            self._url_report("File Download")
+
+            # Report the error
+
+            error_report(e)
+
+            return False
+
+        if self.integrity:
+
+            output_name("# Integrity test passed!")
+
+        output("\n# Saved file to: {}".format(path))
+
+        output("\n[ --== Download Complete! ==-- ]")
+
+        # Determining output name:
+
+        target = self.fileutil.path
+
+        if output_name is None and os.path.isdir(self.fileutil.path):
+
+            # Keep original name:
+
+            target = os.path.join(self.fileutil.path, os.path.split(path)[-1])
+
+        # Installing file:
+
+        val = self.fileutil.install(path, target, backup=backup, new=new, target_copy=target_copy)
 
         if not val:
 
@@ -1166,7 +1321,7 @@ class ServerUpdater:
 
         return
 
-    def _select(self, val, choice, default, name):
+    def _select(self, val, choice, default, name, print=True):
         """
         Selects a value from the choices.
         We support updater keywords,
@@ -1185,11 +1340,13 @@ class ServerUpdater:
 
             val = default
 
-        if val == 'latest':
+        if val == 'latest' or val == -1:
 
             # User wants latest
 
-            output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
+            if print:
+
+                output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
 
             val = choice[-1]
 
@@ -1199,15 +1356,34 @@ class ServerUpdater:
 
             # User selected invalid option
 
-            output("\n# Error: Invalid {} selected!".format(name))
+            if print:
+
+                output("\n# Error: Invalid {} selected!".format(name))
 
             return False, ''
 
         # Option selected is valid. Continue
 
-        output("# Selecting {}: [{}] ...".format(name, val))
+        if print:
+
+            output("# Selecting {}: [{}] ...".format(name, val))
 
         return True, val
+
+    def _url_report(self, point: str):
+        """
+        Reports an error during a request operation.
+
+        :param point: Point of failure
+        :type point: str
+        """
+
+        print("\n+==================================================+")
+        print("> !ATTENTION! >")
+        print("An error occurred during a request operation.")
+        print("Fail Point: {}".format(point))
+        print("Your check/update operation will be canceled.")
+        print("Detailed error info below:")        
 
 
 if __name__ == '__main__':
@@ -1225,10 +1401,10 @@ if __name__ == '__main__':
     # +===========================================+
     # Server version arguments:
 
-    version.add_argument('-v', '--version', help='Server version to install(Sets default value)', default='latest')
-    version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default='latest')
-    version.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0')
-    version.add_argument('-ib', help='Sets the currently installed server build, ignores config', default=0)
+    version.add_argument('-v', '--version', help='Server version to install(Sets default value)', default='latest', type=str)
+    version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default=-1, type=int)
+    version.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0', type=str)
+    version.add_argument('-ib', help='Sets the currently installed server build, ignores config', default=0, type=int)
     version.add_argument('-sv', '--server-version', help="Displays server version from configuration file and exits", action='store_true')
 
     # +===========================================+
@@ -1245,7 +1421,8 @@ if __name__ == '__main__':
     file.add_argument('-o', '--output', help='Name of the new file')
     file.add_argument('-nr', '--no-rename', help='Does not rename the new file, uses default jar name', action='store_true')
     file.add_argument('-co', '--copy-old', help='Copies the old file to a new location')
-    
+    file.add_argument('-ni', '--no-integrity', help='Skips the file integrity check', action='store_false')
+
     # +===========================================+
     # General command line arguments:
 
@@ -1279,7 +1456,7 @@ if __name__ == '__main__':
     output("[Written by: Owen Cochell]\n")
 
     serv = ServerUpdater(args.path, config_file=args.config_file, config=args.no_load_config or args.server_version, prompt=args.interactive,
-                         version=args.iv, build=args.ib)
+                         version=args.iv, build=args.ib, skip_integrity=args.no_integrity)
 
     update_available = True
 
@@ -1315,7 +1492,7 @@ if __name__ == '__main__':
 
         # Allowed to check for update:
 
-        update_available = serv.check()
+        update_available = serv.check(args.version, args.build)
 
     # Checking if we can install:
 
@@ -1325,4 +1502,3 @@ if __name__ == '__main__':
 
         serv.get_new(default_version=args.version, default_build=args.build, backup=args.no_backup or args.new,
                     new=args.new, output_name=name, target_copy=args.copy_old)
-
