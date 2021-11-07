@@ -14,21 +14,24 @@ but we do have some new features to offer.
   - Added the ability to check the integrity of the file using the SHA256 hash provided by the PaperMC API
   - Implemented a very basic caching system to reduce the number of calls made to the PaperMC API
       (Makes your network happy due to saved bandwidth, and makes you happy due to saved time).
-      This should get improved in the future. 
-  - (?)Added the ability to view install data such as changelogs and hashes
-    
+      This may get improved in the future if necessary. 
+  - Added the ability to view install data such as changelogs and hashes
+  - Made determining the output filename a bit simpler, check out the readme
+
 Bug Fixes:
 
   - When a filename is not specified, we install the file to the given location instead of the parent directory
   - Version checks will NOT determine an update is necessary if the currently installed version and 
       version to install is the same(This goes for builds as well)
-    
+  - Fixed bugs related to manually specifying the output filename
+  - Fixed bugs were the script will not backup the jar file when necessary
+
 Other Fixes:
 
   - Cleaned up the code to be more readable(Typing, better docstrings, cleaner code)
-  - Made the Updater class usable by third parties!
-    You can import this class into your own code to work with the PaperMC API.
-    Check out the readme for more info on how to use this class!
+  - Made the Updater class and other components usable by third parties!
+      You can import these components into your own scripts to easily communicate with the PaperMC API!
+      Checkout the readme for more info on this!
   - Cleaned up the readme to be easier to read, and added sections to explain this update
 
 ## 1.4.0

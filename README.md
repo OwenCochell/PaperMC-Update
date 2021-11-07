@@ -1,10 +1,11 @@
 # PaperMC-Update
-A simple CLI script for automating the checking, downloading, and installing of PaperMC server updates.
+A simple CLI script that can check, download, and install PaperMC jar files.
 
 NOTE: This script can only be used for updating a [PaperMC Minecraft Server](https://papermc.io/). I highly recommend 
 their implementation, as it is incredibly fast, supports multiple plugin formats, and is highly customizable. 
-Consider switching if any of that sounds good to you. You can find the PaperMC documentation 
-[Here](https://paper.readthedocs.io/en/latest/), and you can find their github page [Here](https://github.com/PaperMC).
+Consider switching if any of that sounds good to you. 
+Check out the [PaperMC Documentation](https://paper.readthedocs.io/en/latest/), 
+[Download Page](https://papermc.io/downloads), and [GitHub](https://github.com/PaperMC).
 
 # Prerequisites
 You must have Python 3.6+ installed. It should come pre-installed on most linux systems. 
@@ -27,24 +28,31 @@ Again, we require python 3.6 or above.
 
 ## Windows:
 
-Windows users can download python [Here](https://www.python.org/downloads/windows/). The installation is very straightforward, 
+Windows users can download python [here](https://www.python.org/downloads/windows/). The installation is very straightforward, 
 although we recommend you add python to your PATH environment variable, as this makes using python much easier.
 
-More information on installing/configuring python can be found [Here](https://www.python.org/downloads/).
-(Any python 3.6+ version works, although I recommend python 3.9)
+More information on installing/configuring python can be found [here](https://www.python.org/downloads/)
+(Any python 3.6+ version works, although I recommend python 3.9).
 
 We also supply windows binaries that can be ran directly on windows systems without python!
 We use [PyInstaller](https://www.pyinstaller.org/) to build these binaries, and they are built using the one file option, or '-F'.
 
 These binaries are much slower than running via python, and there might be some weird bugs or quirks.
 They are built for windows only. We provide one with each version change.
-Find them [here](https://github.com/Owen-Cochell/PaperMC-Update/releases) in the releases!
+
+Sometimes, these binaries are flagged as malicious programs(usually some form of trojan)
+bu numerous antivirus engines, sometimes including windows defender.
+This is unfortunately quite common for freezed python binaries.
+The best way to deal with the issue is to whitelist the executable in your antivirus. 
+
+Find them [in the releases](https://github.com/Owen-Cochell/PaperMC-Update/releases)!
+
 
 ## MacOS:
 
-MacOS users can download python [Here](https://www.python.org/downloads/mac-osx/).
+MacOS users can download python [here](https://www.python.org/downloads/mac-osx/).
 
-Again, the installation is very straightforward, but more information can be found [Here](https://docs.python.org/3/using/mac.html).
+Again, the installation is very straightforward, but more information can be found [here](https://docs.python.org/3/using/mac.html).
 
 # Note on Python Versions:
 
@@ -68,17 +76,18 @@ To find the version of python your command points to, you can check it's version
 
 If it is below 3.6, then you will have to manually specify the version to run!
 
-From this point on, we will use the default 'python' command in our examples.
+From this point on, we will use the default 'python' command in our examples,
+assuming that it's a valid python version.
 Be sure to specify your python version if necessary!
 
 # Usage
 
-You may run the command like so:
+You may run the script like so:
 
 > python server_update.py [PATH]
 
 Where [PATH] is the path to your paperclip.jar file. More info on the paperclip.jar format can be found 
-[Here](https://paper.readthedocs.io/en/latest/about/structure.html#id2). 
+[here](https://paper.readthedocs.io/en/latest/about/structure.html#id2). 
 By default, when a new file is downloaded, 
 it will be installed to this path under the same name.
 
@@ -97,14 +106,17 @@ the `--interactive` flag for this.
 4. The selected version is downloaded to a temporary directory located somewhere on your computer
 (This directory is generated using the python tempfile module, meaning that it will be generated in a safe, 
 unobtrusive manner, and will be automatically removed at termination of the script).
-5. The currently installed version of the server is backed up to the temporary directory, and deleted.
+5. The integrity of the file will be checked using the SHA256 hash provided by the PaperMC API.
+If this check fails, the install will cancel.
+6. The currently installed version of the server is backed up to the temporary directory, and deleted.
 This option can be disabled if you so choose.
-6. The newly downloaded server jar is moved from the temporary directory to the path of the old server, 
+7. The newly downloaded server jar is moved from the temporary directory to the path of the old server, 
 and will retain the name of the old server(If an error occurs for any reason during the instillation procedure, 
 then the script will attempt to recover your backed up version of the old server from the temporary directory).
 
 This is the default operation of this script. However, you can fine tune the update process using the command line options
 listed below.
+
 # Command Line Options:
 
 The following command line options are available:
@@ -121,8 +133,8 @@ Sets the currently installed server version, ignores config data:
 Sets the currently installed server build, ignores config data:
 >-ib [BUILD]
 
-Sets the output name of the new jar file:
-> -o, --output
+Specifies the output name of the new file:
+>-o [NAME], --output [NAME]
 
 Checks for an update, does not install:
 >-c, --check-only
@@ -137,16 +149,16 @@ Will not load configuration data:
 >-nlc, --no-load-config
 
 Sets config file path(`/PATH_TO_SERVER_JAR/version_history.json` by default):
->-cf, --config-file [PATH TO CONFIG FILE]
+>-cf [CONFIG PATH], --config-file [CONFIG PATH]
 
 Disables the backup feature:
 >-nb, --no-backup
 
-Copies the old jar file to a new location:
->-co, --copy-old
+Disables the file integrity check:
+>-ni, --no-integrity
 
-Does not rename the new jar file:
->-nr, --no-rename
+Copies the old jar file to a new location before deletion:
+>-co, --copy-old
 
 Installs a new paper jar to the specified location:
 >-n, --new
@@ -160,14 +172,14 @@ Displays server version, extracted from configuration file:
 Will only output errors and interactive questions to the terminal:
 >-q, --quiet
 
-Specifies the output name of the new file:
->-o, --output [NAME]
-
 Does not rename the new file, uses recommended name from the PaperAPI:
 >-nr, --no-rename
 
 Copies the old file to a new location before the installation process:
->-co, --copy-old [PATH]
+>-co [PATH], --copy-old [PATH]
+
+Displays stats on the selected version and build:
+>-s, --stats
 
 ## Deprecated Command Line Options
 
@@ -183,7 +195,10 @@ Will not dump configuration data:
 Specify which config directory should be used, defaults to `/DIR_OF_YOUR_SERVER_JAR_FILE/server_update`:
 >--config [PATH]
 
-## Note on filenames:
+Does not rename the new jar file:
+>-nr, --no-rename
+
+# Note on filenames:
 
 We have a couple ways of specifying the target and output filenames.
 In these examples, 'old file' is the jar file that is currently installed.
@@ -192,7 +207,7 @@ In these examples, 'old file' is the jar file that is currently installed.
 In these coming examples, lets say you have a jar file you want to update located here:
 >minecraft/paper.jar
 
-### The Best Way:
+## The Best Way:
 
 The easy way to tell the script where the file to update is located is to pass the path to said file, like so:
 >python server_update.py minecraft/paper.jar
@@ -208,7 +223,7 @@ automatically backup, move, and delete your files for you.
 It also ensures that no matter the version or operations done to the target file,
 it will always have the same name.
 
-### Custom Output Names:
+## Custom Output Names:
 
 You can also specify a custom name of the new file like so:
 >python server_update.py -o new_file.jar minecraft/paper.jar
@@ -221,7 +236,7 @@ In our example, the old file will be backed up and deleted as usual,
 but the new file will be renamed to 'new_file.jar',
 and moved to the directory the old file was in.
 
-### Keeping Old File:
+## Keeping Old File:
 
 You can use the '--copy-old' parameter
 to specify where you want the old file to be copied to.
@@ -243,7 +258,7 @@ These options will be ignored if there is no target file!
 Be warned, that the old file will overwrite any files in the copy location
 that share the same name!
 
-### Other Filename Stuff:
+## Other Filename Stuff:
 
 If no target filename is specified from the path,
 and no output filename is specified,

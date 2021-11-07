@@ -22,7 +22,7 @@ import argparse
 from urllib.error import URLError
 from http.client import HTTPResponse
 from hashlib import sha256
-from typing import Callable, List, Tuple
+from typing import Any, Callable, List, Sequence, Tuple, Union
 from json.decoder import JSONDecodeError
 from math import ceil
 
@@ -177,9 +177,7 @@ def progress_bar(length: int, stepsize: int, total_steps: int, step: int, prefix
                                                         (step*stepsize if step < total_steps - 1 else length), length))
         stdout.flush()
 
-    # Writing newline, to continue execution
-
-    if total_steps <= step:
+    if not args.quiet and step >= total_steps - 1 :
 
         stdout.write("\n")
         stdout.flush()
@@ -212,7 +210,7 @@ class Update:
 
         self.cache = {}  # A basic cache for saving responses
 
-    def _none_function(*args, **kwargs):
+    def _none_function(self, length, blocksize, total, step, *args, **kwargs):
         """
         Dummy function that does nothing.
         """
@@ -235,17 +233,15 @@ class Update:
 
         # Convert and return the tuple:
 
-        final = []
+        temp: List[int] = []
 
         for item in ver.split('.'):
 
             # Convert and add the item:
 
-            final.append(int(item))
+            temp.append(int(item))
 
-        # Return the final tuple:
-
-        return tuple(final)
+        return (temp[0], temp[1], temp[2])
 
     def build_data_url(self, version: str=None, build_num: int=None) -> str:
         """
@@ -344,7 +340,7 @@ class Update:
 
         return urllib.request.urlopen(req)
 
-    def download_file(self, path: str, version: str, build_num:int, check:bool=True, call: Callable=None, args: List=None) -> str:
+    def download_file(self, path: str, version: str, build_num:int, check:bool=True, call: Callable=None, args: List=None, blocksize: int=4608) -> str:
         """
         Donloads the content to the given external file.
         We handle all file operations,
@@ -372,6 +368,8 @@ class Update:
         :type call: Callable
         :param args: Args to pass to the callable
         :type args: List
+        :param blocksize: Number of bytes to read per copy operation
+        :type blocksize: int
         :return: Path the file was saved to
         :raises: ValueError: If file integrity check fails
         """
@@ -389,10 +387,6 @@ class Update:
 
         data = self.download_response(version, build_num)
 
-        # Getting content length of download:
-
-        blocksize = 4608
-
         # Get filename for download:
 
         if os.path.isdir(path):
@@ -403,7 +397,20 @@ class Update:
 
         # Get length of file:
 
-        length = int(data.getheader('content-length'))
+        length = data.getheader('content-length')
+
+        # Ensure result is not None:
+
+        if length is None:
+
+            # Raise an error:
+
+            raise ValueError("Content length not present in HTTP headers!")
+
+        # Otherwise, set the length:
+
+        length = int(length)
+
         total = ceil(length/blocksize) + 1
 
         # Open the file:
@@ -583,6 +590,7 @@ class FileUtil:
         self.path: str = os.path.abspath(path)  # Path to working directory
         self.temp: tempfile.TemporaryDirectory  # Tempdir instance
         self.config_default = 'version_history.json'  # Default name of paper versioning file
+        self.target_path = ''  # Path the new file will be moved to
 
     def create_temp_dir(self):
         """
@@ -613,7 +621,17 @@ class FileUtil:
         :rtype: Tuple[str, int]
         """
 
-        config = (config if config is not None else os.path.join(os.path.dirname(self.path), self.config_default))
+        if config is None:
+
+            # Need to determine our config path:
+
+            if os.path.isdir(self.path):
+
+                config = os.path.join(self.path, self.config_default)
+
+            else:
+
+                config = os.path.join(os.path.dirname(self.path), self.config_default)
 
         output("# Loading configuration data from file [{}] ...".format(config))
 
@@ -645,23 +663,6 @@ class FileUtil:
 
             return '0', 0
 
-    def _fail_install(self, point):
-
-        """
-        Shows where the error occurred during the installation.
-
-        :param point: Point of failure
-        """
-
-        print("\n+==================================================+")
-        print("> !ATTENTION! <")
-        print("An error occurred during the installation, and we can not continue.")
-        print("We will attempt to recover your previous installation(If applicable)")
-        print("Fail point: {}".format(point))
-        print("Detailed error info below:")
-
-        return
-
     def install(self, file_path: str, new_path: str, target_copy: str=None, backup=True, new=False):
         """
         "Installs" the contents of the temporary file into the target in the root server directory.
@@ -686,7 +687,7 @@ class FileUtil:
         :type new: bool
         """
 
-        output("\n[ --== Installation: ==-- ]")
+        output("\n[ --== Installation: ==-- ]\n")
 
         # Checking if we should copy the old file:
 
@@ -736,6 +737,8 @@ class FileUtil:
                 error_report(e)
 
                 return False
+
+            self.target_path = new_path
 
             output("# Backup created at: {}".format(os.path.join(self.temp.name, 'backup')))
 
@@ -804,7 +807,7 @@ class FileUtil:
 
         output("# Done copying download data to root directory!")
 
-        output("[ --== Installation complete! ==-- ]")
+        output("\n[ --== Installation complete! ==-- ]")
 
         return True
 
@@ -827,7 +830,7 @@ class FileUtil:
 
         try:
 
-            os.remove(self.path)
+            os.remove(self.target_path)
 
         except FileNotFoundError:
 
@@ -873,6 +876,23 @@ class FileUtil:
 
         return True
 
+    def _fail_install(self, point):
+
+        """
+        Shows where the error occurred during the installation.
+
+        :param point: Point of failure
+        """
+
+        print("\n+==================================================+")
+        print("> !ATTENTION! <")
+        print("An error occurred during the installation, and we can not continue.")
+        print("We will attempt to recover your previous installation(If applicable)")
+        print("Fail point: {}".format(point))
+        print("Detailed error info below:")
+
+        return
+
 
 class ServerUpdater:
 
@@ -887,7 +907,9 @@ class ServerUpdater:
         self.fileutil = FileUtil(path)  # Fileutility instance
         self.prompt = prompt  # Whether to prompt the user for version selection
         self.config_file = config_file  # Name of the config file we pull version info from
-        self.no_integrity = integrity  # Boolean determining if we should run an integrity check
+        self.integrity = integrity  # Boolean determining if we should run an integrity check
+        self.version_install = None  # Version to install
+        self.build_install = None  # Build to install
 
         # Starting object
 
@@ -931,6 +953,45 @@ class ServerUpdater:
         output("  > Version: [{}]".format(self.version))
         output("  > Build: [{}]".format(self.buildnum))
 
+    def view_data(self):
+        """
+        Displays data on the selected version and build.
+
+        We display the version, build, time,
+        commit changes, filename, and the sha256 hash.
+
+        :param data: Dictionary to display
+        :type data: dict
+        """
+
+        # Get the version we are working with:
+
+        ver, build = self.version_select(args.version, args.build)
+
+        # Get the data:
+
+        data = self.update.get(ver, build)
+
+        output("\n+==================================================+")
+
+        output("\n[ --== Paper Stats: ==-- ]\n")
+        output("Version: {}".format(data['version']))
+        output("Build Number: {}".format(data['build']))
+        output("Creation Time: {}".format(data['time']))
+        output("File name: {}".format(data['downloads']['application']['name']))
+        output("SHA256 Hash: {}".format(data['downloads']['application']['sha256']))
+
+        for num, change in enumerate(data['changes']):
+
+            output("\nChange {}:\n".format(num))
+
+            output("Commit ID: {}".format(change['commit']))
+            output("Commit Summary: {}".format(change['summary']))
+            output("Commit Message: {}".format(change['message']))
+
+        output("\n[ --== End Paper Stats! ==-- ]\n")
+        output("+==================================================+\n")
+
     def check(self, default_version: str, default_build: int):
         """
         Checks if a new version is available.
@@ -942,7 +1003,7 @@ class ServerUpdater:
         :return: True is new version, False if not/error
         """
 
-        output("\n[ --== Checking For New Version: ==-- ]")
+        output("[ --== Checking For New Version: ==-- ]\n")
 
         # Checking for new server version
 
@@ -974,12 +1035,12 @@ class ServerUpdater:
 
         output("# Comparing local <> remote server versions ...")
 
-        if self.version != self._select(default_version, ver, 'latest', 'version', print=False)[1] and (self.version == '0' or ver[-1] != self.version):
+        if self.version != self._select(default_version, ver, 'latest', 'version', print=False) and (self.version == '0' or ver[-1] != self.version):
 
             # New version available!
 
             output("# New Version available! - [Version: {}]".format(ver[-1]))
-            output("[ --== Version check complete! ==-- ]\n")
+            output("\n[ --== Version check complete! ==-- ]")
 
             return True
 
@@ -1015,30 +1076,48 @@ class ServerUpdater:
 
         output("# Comparing local <> remote builds ...")
 
-        if self.buildnum != self._select(default_build, build, 'latest', 'buildnum', print=False)[1] and (self.buildnum == 0 or build[-1] != self.buildnum):
+        if self.buildnum != self._select(default_build, build, 'latest', 'buildnum', print=False) and (self.buildnum == 0 or build[-1] != self.buildnum):
 
             # New build available!
 
             output("# New build available! - [Build: {}]".format(build[-1]))
-            output("[ --== Version check complete! ==-- ]\n")
+            output("\n[ --== Version check complete! ==-- ]")
 
             return True
 
         output("# No new builds found.")
-        output("[ --== Version check complete! ==-- ]\n")
+        output("\n[ --== Version check complete! ==-- ]")
 
         return False
 
-    def version_select(self, default_version='latest', default_build='latest'):
+    def version_select(self, default_version: str='latest', default_build: int=-1) -> Tuple[str, int]:
         """
         Prompts the user to select a version to download,
         and checks input against values from Paper API.
         Default value is recommended option, usually 'latest'.
 
-        :param default_build: Default build number
         :param default_version: Default version
+        :type default_version: str
+        :param default_build: Default build number
+        :type default_build: int
         :return: (version, build)
         """
+
+        if self.version_install is not None and self.build_install is not None:
+
+            # Already have a version and build selected, return:
+
+            return self.version_install, self.build_install
+
+        output("\n[ --== Version Selection: ==-- ]\n")
+
+        new_default = str(default_build)
+
+        if new_default == '-1':
+
+            # Convert into something more redable:
+
+            new_default: str = 'latest'
 
         # Checking if we have version information:
 
@@ -1056,7 +1135,7 @@ class ServerUpdater:
 
             error_report(e, net=True)
 
-            return False
+            return '', -1
 
         except Exception as e:
 
@@ -1066,7 +1145,7 @@ class ServerUpdater:
 
             error_report(e)
 
-            return False
+            return '', -1
 
         if self.prompt:
 
@@ -1089,9 +1168,9 @@ class ServerUpdater:
 
                 ver = input("\nEnter Version[{}]: ".format(default_version))
 
-                stat, ver = self._select(ver, versions, default_version, "version")
+                ver = self._select(ver, versions, default_version, "version")
 
-                if stat:
+                if ver:
 
                     # User selected okay value
 
@@ -1101,15 +1180,15 @@ class ServerUpdater:
 
             # Just select default version
 
-            stat, ver = self._select('', versions, default_version, "version")
+            ver = self._select('', versions, default_version, "version")
 
-            if not stat:
+            if not ver:
 
                 # Invalid version selected
 
                 print("# Aborting installation!")
 
-                return None, None
+                return '', -1
 
         # Getting build info
 
@@ -1117,7 +1196,7 @@ class ServerUpdater:
 
         try:
 
-            nums = self.update.get_buildnums(ver)
+            nums = list(self.update.get_buildnums(ver))
 
         except URLError as e:
 
@@ -1127,7 +1206,7 @@ class ServerUpdater:
 
             error_report(e, net=True)
 
-            return False
+            return '', -1
 
         except Exception as e:
 
@@ -1137,7 +1216,7 @@ class ServerUpdater:
 
             error_report(e)
 
-            return False
+            return '', -1
 
         if self.prompt:
 
@@ -1150,39 +1229,42 @@ class ServerUpdater:
 
             # Displaying available builds
 
-            for num, i in enumerate(nums):
+            new = []
+
+            for i in nums:
 
                 print("  > Build Num: [{}]".format(i))
-
-                nums[num] = str(i)
+                new.append(str(i))
 
             while True:
 
                 # Prompting user for build info
 
-                build = input("\nEnter Build[{}]: ".format(default_build))
+                build = input("\nEnter Build[{}]: ".format(new_default))
 
-                stat, build = self._select(build, nums, default_build, "build")
+                print(new_default)
 
-                if stat:
+                build = self._select(build, new, new_default, "build")
+
+                if build:
 
                     # User selected okay value
-
+ 
                     break
 
         else:
 
             # Select default build
 
-            stat, build = self._select('', nums, default_build, "build")
+            build = self._select('', nums, new_default, "build")
 
-            if not stat:
+            if not build:
 
                 # Invalid build selected!
 
                 output("# Aborting installation!")
 
-                return None, None
+                return '', -1
 
         output("\nYou have selected:")
         output("   > Version: [{}]".format(ver))
@@ -1190,9 +1272,15 @@ class ServerUpdater:
 
         output("\n[ --== Version Selection Complete! ==-- ]")
 
-        return ver, build
+        # Setting our values:
 
-    def get_new(self, default_version='latest', default_build='latest', backup=True, new=False, target_copy=None, output_name=None):
+        self.version_install = str(ver)
+        self.build_install = int(build)
+
+        return self.version_install, self.build_install
+
+    def get_new(self, default_version: str='latest', default_build: int=-1, backup: bool=True, new: bool=False, 
+            target_copy: str=None, output_name: str=None):
         """
         Downloads and installs the new version,
         Prompts the user to select a specific version.
@@ -1219,7 +1307,7 @@ class ServerUpdater:
 
         ver, build = self.version_select(default_version=default_version, default_build=default_build)
 
-        if ver is None or build is None:
+        if ver == '' or build == -1:
 
             # Error occurred, cancel installation
 
@@ -1242,7 +1330,7 @@ class ServerUpdater:
 
         # Creating temporary directory to store assets:
 
-        output("# Creating temporary directory...")
+        output("\n# Creating temporary directory...")
 
         self.fileutil.create_temp_dir()
 
@@ -1250,7 +1338,7 @@ class ServerUpdater:
 
         # Starting download process:
 
-        output("\n[ --== Starting Download: ==-- ]")
+        output("\n[ --== Starting Download: ==-- ]\n")
 
         try:
 
@@ -1266,6 +1354,22 @@ class ServerUpdater:
 
             return False
 
+        except ValueError as e:
+
+            print("\n+==================================================+")
+            print("> !ATTENTION! <")
+            print("The file integrity check failed!")
+            print("This means that the file downloaded is corrupted or damaged in some way.")
+            print("Your current install (if one is targeted) has not been altered.")
+            print("\nThere are many diffrent causes for this error to occur.")
+            print("It is likely that this is a one-off event.")
+            print("Try again, and if this command continues to fail,")
+            print("then your network or device might have a problem.")
+
+            error_report(e)
+
+            return False
+
         except Exception as e:
 
             self._url_report("File Download")
@@ -1278,9 +1382,9 @@ class ServerUpdater:
 
         if self.integrity:
 
-            output_name("# Integrity test passed!")
+            output("# Integrity test passed!")
 
-        output("\n# Saved file to: {}".format(path))
+        output("# Saved file to: {}".format(path))
 
         output("\n[ --== Download Complete! ==-- ]")
 
@@ -1288,11 +1392,29 @@ class ServerUpdater:
 
         target = self.fileutil.path
 
+        # No output name defined via argument or path:
+
         if output_name is None and os.path.isdir(self.fileutil.path):
 
             # Keep original name:
 
             target = os.path.join(self.fileutil.path, os.path.split(path)[-1])
+
+        # Output name specified via argument but not path:
+
+        elif output_name is not None and os.path.isdir(self.fileutil.path):
+
+            # Save file with custom name:
+
+            target = os.path.join(self.fileutil.path, output_name)
+
+        # Output name specified via argument and path:
+
+        elif output_name is not None and os.path.isfile(self.fileutil.path):
+
+            # Save file with custom name other than filename in path:
+
+            target = os.path.join(os.path.dirname(self.fileutil.path), output_name)
 
         # Installing file:
 
@@ -1306,7 +1428,7 @@ class ServerUpdater:
 
         # Cleaning up temporary directory:
 
-        output("# Cleaning up temporary directory...")
+        output("\n# Cleaning up temporary directory...")
 
         self.fileutil.close_temp_dir()
 
@@ -1321,17 +1443,24 @@ class ServerUpdater:
 
         return
 
-    def _select(self, val, choice, default, name, print=True):
+    def _select(self, val: Any, choice: Sequence[Any], default: str, name: str, print: bool=True) -> Union[str, None]:
         """
         Selects a value from the choices.
         We support updater keywords,
         like 'latest' and ''.
 
         :param val: Value entered
+        :type val: Any
         :param choice: Choices to choose from
+        :type choice: Sequence[Any]
         :param default: Default value
+        :type default: str
         :param name: Name of value we are choosing
-        :return: True if valid, false if invalid
+        :type name: str
+        :param print: Boolean determining if we output choices
+        :type print: bool
+        :return: Selected value, None if invalid
+        :rtype: str, None
         """
 
         if val == '':
@@ -1350,7 +1479,7 @@ class ServerUpdater:
 
             val = choice[-1]
 
-            return True, val
+            return val
 
         if val not in choice:
 
@@ -1360,7 +1489,7 @@ class ServerUpdater:
 
                 output("\n# Error: Invalid {} selected!".format(name))
 
-            return False, ''
+            return None
 
         # Option selected is valid. Continue
 
@@ -1368,7 +1497,7 @@ class ServerUpdater:
 
             output("# Selecting {}: [{}] ...".format(name, val))
 
-        return True, val
+        return val
 
     def _url_report(self, point: str):
         """
@@ -1419,7 +1548,6 @@ if __name__ == '__main__':
     file.add_argument('-n', '--new', help='Installs a new paper jar instead of updating. Great for configuring a new server install',
                         action='store_true')
     file.add_argument('-o', '--output', help='Name of the new file')
-    file.add_argument('-nr', '--no-rename', help='Does not rename the new file, uses default jar name', action='store_true')
     file.add_argument('-co', '--copy-old', help='Copies the old file to a new location')
     file.add_argument('-ni', '--no-integrity', help='Skips the file integrity check', action='store_false')
 
@@ -1432,14 +1560,15 @@ if __name__ == '__main__':
                         action='store_true')
     parser.add_argument('-q', '--quiet', help="Will only output errors and interactive questions to the terminal",
                         action='store_true')
+    parser.add_argument('-s', '--stats', help='Displays statistics on the selected version and build', action='store_true')
     parser.add_argument('-V', '--script-version', help='Displays script version', version=__version__, action='version')
-
 
     # Deprecated arguments - Included for compatibility, but do nothing
 
     parser.add_argument('-ndc', '--no-dump-config', help=argparse.SUPPRESS, action='store_false')
     parser.add_argument('--config', help=argparse.SUPPRESS, default='NONE')
     parser.add_argument('-C', '--cleanup', help=argparse.SUPPRESS, action='store_true')
+    parser.add_argument('-nr', '--no-rename', help=argparse.SUPPRESS)
 
     args = parser.parse_args()
 
@@ -1456,7 +1585,7 @@ if __name__ == '__main__':
     output("[Written by: Owen Cochell]\n")
 
     serv = ServerUpdater(args.path, config_file=args.config_file, config=args.no_load_config or args.server_version, prompt=args.interactive,
-                         version=args.iv, build=args.ib, skip_integrity=args.no_integrity)
+                         version=args.iv, build=args.ib, integrity=args.no_integrity)
 
     update_available = True
 
@@ -1464,19 +1593,17 @@ if __name__ == '__main__':
 
     name = None
 
-    if not args.no_rename:
+    if args.output:
 
-        if args.output:
+        # Name was explicitly given to us:
 
-            # Name was explicitly given to us:
+        name = args.output
 
-            name = args.output
+    elif os.path.basename(args.path) != '':
 
-        elif os.path.basename(args.path) != '':
+        # Get filename from the given path:
 
-            # Get filename from the given path:
-
-            name = os.path.basename(args.path)
+        name = os.path.basename(args.path)
 
     # Check if we are just looking for server info:
 
@@ -1485,6 +1612,14 @@ if __name__ == '__main__':
         # Already printed it, lets exit
 
         exit()
+
+    # Check for displaying stats:
+
+    if args.stats:
+
+        # Display stats to the terminal:
+
+        serv.view_data()
 
     # Checking if we are skipping the update
 
@@ -1500,5 +1635,5 @@ if __name__ == '__main__':
 
         # Allowed to install/Can install
 
-        serv.get_new(default_version=args.version, default_build=args.build, backup=args.no_backup or args.new,
+        serv.get_new(default_version=args.version, default_build=args.build, backup=not (args.no_backup or args.new),
                     new=args.new, output_name=name, target_copy=args.copy_old)
