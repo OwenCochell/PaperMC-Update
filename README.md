@@ -1,4 +1,5 @@
 # PaperMC-Update
+
 A simple CLI script that can check, download, and install PaperMC jar files.
 
 NOTE: This script can only be used for updating a [PaperMC Minecraft Server](https://papermc.io/). I highly recommend 
@@ -8,6 +9,7 @@ Check out the [PaperMC Documentation](https://paper.readthedocs.io/en/latest/),
 [Download Page](https://papermc.io/downloads), and [GitHub](https://github.com/PaperMC).
 
 # Prerequisites
+
 You must have Python 3.6+ installed. It should come pre-installed on most linux systems. 
 This script has no other dependencies, so all you need is python! Instructions for installation are below:
 
@@ -63,9 +65,9 @@ This can be done like so:
 
 >python[VERSION] script_to_run.py
 
-Using this template, we can run python 3.7 like this:
+Using this template, we can run python 3.9 like this:
 
->python3.7 script_to_run.py
+>python3.9 script_to_run.py
 
 This usage is most prevalent on linux devices,
 as they may have older versions of python installed for compatibility reasons.
@@ -172,9 +174,6 @@ Displays server version, extracted from configuration file:
 Will only output errors and interactive questions to the terminal:
 >-q, --quiet
 
-Does not rename the new file, uses recommended name from the PaperAPI:
->-nr, --no-rename
-
 Copies the old file to a new location before the installation process:
 >-co [PATH], --copy-old [PATH]
 
@@ -262,13 +261,8 @@ that share the same name!
 
 If no target filename is specified from the path,
 and no output filename is specified,
-then the new file will not be renamed.
-You can also use the '--no-rename'
-parameter to prevent the new file from being renamed.
-If the file is not going to be renamed,
-then we use the recommended filename from the PaperAPI.
-
-The recommended name usually looks something like this:
+then the default filename will be used.
+The default name usually looks something like this:
 >paper-[VERSION]-[BUILD].jar
 
 So, if you downloaded build 734 version 1.16.5:
@@ -304,6 +298,15 @@ Check to see if a newer version is available, does not install:
 Display currently installed server version:
 >python server_update.py --server-version [PATH]
 
+Display stats on currently installed server version before installation:
+>python server_update.py --stats [PATH]
+
+Display stats on version 1.16.5 build 435 before installation:
+>python server_update.py --stats --version 1.16.5 --build 435 [PATH]
+
+Display stats on installed version without installing:
+>python server_update.py --check-only [PATH]
+
 Install a paper jar at the given location, without going through the update process.
 Great if you want to set up a new server install.
 >python server_update.py --new -o paper.jar [PATH]
@@ -322,7 +325,7 @@ and it made using PaperMC-Update a lot more complicated. Now, we read version in
 eliminates the need for 'script-generated configuration files',
 and makes PaperMC-Update easier to use and more accurate.
 
-However, their are some things to keep in mind:
+However, there are some things to keep in mind:
 
 ## Official Builds
 
@@ -358,10 +361,31 @@ for your build.
 
 The old command line options were for managing the configuration file, such as removing it, creating it, and
 dumping information to it. These features are now obsolete, but the command line options are included for 
-backwards compatibility. These options do not appear on the help menu and they do nothing, they are their only to
-prevent usage errors. It is highly recommended that you stop using these options, and update any scripts or
+backwards compatibility. These options do not appear on the help menu and they do nothing. This is to prevent usage errors. It is highly recommended that you stop using these options, and update any scripts or
 implementations that use these features. These features might be removed in a later version if deemed necessary,
 so be warned.
+
+# Updater Class:
+
+Developers can import the Updater class into their own projects.
+The updater class offers entry points into the PaperMC API,
+and allows users to get version/build data
+and download jar files.
+
+You can import and create the class like so:
+
+```python
+from server_update import Update
+
+update = Update()
+```
+
+Just be sure the server_update.py file is present in the directory
+of the code importing it.
+
+You should have a look at the docstrings in the source code for usage.
+All arguments and outputs are described and typed,
+so implementing the Updater class into your code should be relatively painless.
 
 # Conclusion
 

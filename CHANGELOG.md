@@ -4,7 +4,7 @@
 
 Major changes!
 Due to numerous code and feature changes,
-we have bumped up to version 2.
+we have bumped to version 2.
 This update mostly focuses on behind the scene bug 
 fixed and improvements,
 but we do have some new features to offer.
