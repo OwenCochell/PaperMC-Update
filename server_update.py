@@ -691,10 +691,6 @@ class FileUtil:
 
         # Checking if we should copy the old file:
 
-        print("Target Copy: {}".format(target_copy))
-        print("Is file: {}".format(os.path.isfile(self.path)))
-        print("Path: {}".format(self.path))
-
         if target_copy is not None and os.path.isfile(self.path):
 
             # Copy the old file:
