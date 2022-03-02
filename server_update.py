@@ -31,7 +31,7 @@ from math import ceil
 A Set of tools to automate the server update process.
 """
 
-__version__ = '2.0.0'
+__version__ = '2.1.0'
 
 
 def load_config(config: str) -> Tuple[str, int]:
@@ -1447,7 +1447,7 @@ class ServerUpdater:
         """
         Selects a value from the choices.
         We support updater keywords,
-        like 'latest' and ''.
+        like 'latest', 'current' and ''.
 
         :param val: Value entered
         :type val: Any
@@ -1480,6 +1480,12 @@ class ServerUpdater:
             val = choice[-1]
 
             return val
+
+        if val == 'current':
+            
+            # User wants currently installed version:
+            
+            val = self.version
 
         if val not in choice:
 

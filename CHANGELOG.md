@@ -1,5 +1,20 @@
 # Changelog 
 
+## 2.1.0
+
+Features Added:
+
+  - Added a new keyword, `current`, which will automatically select the current version/build to install
+
+Bug Fixes:
+
+  - Removed some junk debugging messages that would appear even if we are quieted.
+
+other Fixes:
+
+  - Added section to the readme that describes how to use keywords.
+
+
 ## 2.0.0
 
 Major changes!
@@ -9,7 +24,7 @@ This update mostly focuses on behind the scene bug
 fixes and improvements,
 but we do have some new features to offer.
 
-  Features Added:
+Features Added:
 
   - Added the ability to check the integrity of the file using the SHA256 hash provided by the PaperMC API
   - Implemented a very basic caching system to reduce the number of calls made to the PaperMC API

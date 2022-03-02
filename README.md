@@ -180,6 +180,30 @@ Copies the old file to a new location before the installation process:
 Displays stats on the selected version and build:
 >-s, --stats
 
+## Special Keywords
+
+The `-v`, `-b`, and interactive menu have special keywords
+that can be used to do special things.
+
+The `latest` keyword will automatically select the latest option available.
+
+The `current` keyword will automatically select the currently installed currently installed value.
+
+For example, lets say you have paper version 1.17 and build 60 installed.
+If you want to get the latest build while maintaining your installed version,
+then you can run server update like so:
+
+>python server_update.py -v current [PATH]
+
+This will only install new builds for your current version.
+You can also use the `current` keyword to ensure that the version
+will never change, regardless of what you have installed.
+
+These keywords can be used in the interactive menu as well.
+You can also use these keywords for selecting the build,
+although using the `current` keyword for build selection is not recommended! 
+
+
 ## Deprecated Command Line Options
 
 The following command line options are deprecated. They are still included for backwards compatibility,
@@ -313,6 +337,9 @@ Great if you want to set up a new server install.
 
 Copy the old file to a new location before the installation process:
 >python server_update.py --copy-old /new/spot/old.jar [PATH]
+
+Select the currently installed version as the version to install:
+>python server_update.py -v current [PATH]
 
 # Notes on Deprecated Features
 
