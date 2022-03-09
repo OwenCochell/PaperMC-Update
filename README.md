@@ -180,6 +180,9 @@ Copies the old file to a new location before the installation process:
 Displays stats on the selected version and build:
 >-s, --stats
 
+Checks GitHub for a new version of this script, and upgrades if necessary:
+>-u, --upgrade
+
 ## Special Keywords
 
 The `-v`, `-b`, and interactive menu have special keywords
@@ -203,6 +206,22 @@ These keywords can be used in the interactive menu as well.
 You can also use these keywords for selecting the build,
 although using the `current` keyword for build selection is not recommended! 
 
+
+## Upgrading the Script
+
+This script has the ability to upgrade itself!
+You can do this by providing the `-u` parameter.
+
+We do this by checking GitHub for any version changes.
+If there is a change, then we download the new file
+and replace the currently running script with the new one.
+If we are upgrading, then we will immediately exit after the operation,
+and no other actions will be done.
+
+Please note, this upgrade operation is not compatible 
+with prebuilt binaries!
+If you attempt to upgrade a pre-built binary,
+then the script will print a warning and exit.
 
 ## Deprecated Command Line Options
 
@@ -340,6 +359,9 @@ Copy the old file to a new location before the installation process:
 
 Select the currently installed version as the version to install:
 >python server_update.py -v current [PATH]
+
+Upgrades the script if necessary:
+>python server_upgrade.py -u
 
 # Notes on Deprecated Features
 

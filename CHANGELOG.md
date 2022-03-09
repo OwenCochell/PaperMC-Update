@@ -1,16 +1,30 @@
 # Changelog 
 
+## 2.2.0
+
+Features Added:
+
+  - We can now upgrade ourselves! You can do this using the `-u` parameter.
+
+Bug Fixes:
+
+  - Using the `current` keyword when selecting the build no longer fails.
+
+Other Fixes:
+
+  - Added section to readme describing the update process.
+
 ## 2.1.0
 
 Features Added:
 
-  - Added a new keyword, `current`, which will automatically select the current version/build to install
+  - Added a new keyword, `current`, which will automatically select the current version/build to install.
 
 Bug Fixes:
 
   - Removed some junk debugging messages that would appear even if we are quieted.
 
-other Fixes:
+Other Fixes:
 
   - Added section to the readme that describes how to use keywords.
 

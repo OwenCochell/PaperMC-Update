@@ -1,15 +1,17 @@
-from sys import version_info, stdout
+from __future__ import annotations
+
+import sys
 
 # Before we do ANYTHING, we check to make sure python is the correct version!
 
-if version_info < (3,6,0):
+if sys.version_info < (3,6,0):
 
-    stdout.write("\n--== [ Invalid python version! ] ==--\n")
-    stdout.write("Current version: {}\n".format(version_info))
-    stdout.write("Expected version: 3.6+\n")
-    stdout.write("\nPlease install the correct version of python before continuing!\n")
+    sys.stdout.write("\n--== [ Invalid python version! ] ==--\n")
+    sys.stdout.write("Current version: {}\n".format(version_info))
+    sys.stdout.write("Expected version: 3.6+\n")
+    sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
 
-    exit()
+    sys.exit()
 
 import tempfile
 import urllib.request
@@ -31,7 +33,13 @@ from math import ceil
 A Set of tools to automate the server update process.
 """
 
-__version__ = '2.1.0'
+__version__ = '2.2.0'
+
+# These variables contain links for the script updating process.
+
+GITHUB = 'https://github.com/Owen-Cochell/PaperMC-Update'
+GITHUB_RELEASE = 'https://api.github.com/repos/Owen-Cochell/PaperMC-Update/releases/latest'
+GITHUB_RAW = 'https://raw.githubusercontent.com/Owen-Cochell/PaperMC-Update/master/server_update.py'
 
 
 def load_config(config: str) -> Tuple[str, int]:
@@ -72,6 +80,78 @@ def load_config(config: str) -> Tuple[str, int]:
     # Returning version information:
 
     return version, build
+
+
+def upgrade_script(serv: ServerUpdater):
+    """
+    Upgrades this script.
+    
+    We do this by checking github for any new releases,
+    comparing them to our version,
+    and then updating if necessary.
+    
+    We use the ServerUpdater to do this operation for us,
+    so you will need to provide it for this function
+    to work correctly.
+
+    :param serv: ServerUpdater to use
+    :type serv: ServerUpdater
+    """
+    
+    output("# Checking for update ...")
+    
+    # Creating request here:
+    
+    req = urllib.request.Request(GITHUB_RELEASE, headers={'Accept': 'application/vnd.github.v3+json'})
+
+    # Getting data:
+    
+    data = json.loads(urllib.request.urlopen(req).read())
+
+    # Checking if the version is new:
+
+    if data['tag_name'] == __version__:
+
+        # No update necessary, lets log and exit:
+
+        output("# No update necessary!\n")
+
+        return
+
+    output("# New version available!")
+
+    url = GITHUB_RAW
+    path = os.path.realpath(__file__)
+
+    # Determine if we are working in a frozen environment:
+    
+    if getattr(sys, 'frozen', False):
+        
+        print("# Can't upgrade frozen files!")
+
+        return
+
+    # Getting data:
+
+    data = urllib.request.urlopen(urllib.request.Request(url))
+
+    # Write the data:
+    
+    serv.fileutil.create_temp_dir()
+
+    temp_path = os.path.realpath(serv.fileutil.temp.name + '/temp')
+
+    file = open(temp_path, mode='wb')
+
+    file.write(data.read())
+
+    # Install the new script:
+
+    serv.fileutil.install(temp_path, path)
+
+    # We are done!
+
+    output("# Script update complete!\n")
 
 
 def output(text: str):
@@ -173,14 +253,14 @@ def progress_bar(length: int, stepsize: int, total_steps: int, step: int, prefix
 
     if not args.quiet:
 
-        stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
+        sys.stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
                                                         (step*stepsize if step < total_steps - 1 else length), length))
-        stdout.flush()
+        sys.stdout.flush()
 
     if not args.quiet and step >= total_steps - 1 :
 
-        stdout.write("\n")
-        stdout.flush()
+        sys.stdout.write("\n")
+        sys.stdout.flush()
 
 
 class Update:
@@ -342,7 +422,7 @@ class Update:
 
     def download_file(self, path: str, version: str, build_num:int, check:bool=True, call: Callable=None, args: List=None, blocksize: int=4608) -> str:
         """
-        Donloads the content to the given external file.
+        Downloads the content to the given external file.
         We handle all file operations,
         and automatically work with the URLResponse objects
         to write the file contents to an external file.
@@ -910,14 +990,11 @@ class ServerUpdater:
         self.integrity = integrity  # Boolean determining if we should run an integrity check
         self.version_install = None  # Version to install
         self.build_install = None  # Build to install
-
-        # Starting object
-
-        self._start(config)
+        self.config = config
 
         self.update = Update()  # Updater Instance
 
-    def _start(self, config):
+    def start(self):
         """
         Starts the object, loads configuration.
         """
@@ -925,7 +1002,7 @@ class ServerUpdater:
         temp_version = '0'
         temp_build = 0
 
-        if config:
+        if self.config:
 
             # Allowed to use configuration file
 
@@ -1483,9 +1560,15 @@ class ServerUpdater:
 
         if val == 'current':
             
-            # User wants currently installed version:
+            if name == 'version':
             
-            val = self.version
+                # User wants currently installed version:
+                
+                val = self.version
+                
+            elif name == 'build':
+                
+                val = self.buildnum
 
         if val not in choice:
 
@@ -1529,7 +1612,7 @@ if __name__ == '__main__':
                                      epilog="Please check the github page for more info: "
                                             "https://github.com/Owen-Cochell/PaperMC-Update.")
 
-    parser.add_argument('path', help='Path to paper jar file')
+    parser.add_argument('path', help='Path to paper jar file', default=os.path.dirname(__file__) + '/', nargs='?')
 
     version = parser.add_argument_group('Version Options', 'Arguments for selecting and altering server version information')
 
@@ -1537,7 +1620,7 @@ if __name__ == '__main__':
     # Server version arguments:
 
     version.add_argument('-v', '--version', help='Server version to install(Sets default value)', default='latest', type=str)
-    version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default=-1, type=int)
+    version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default=-1, type=str)
     version.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0', type=str)
     version.add_argument('-ib', help='Sets the currently installed server build, ignores config', default=0, type=int)
     version.add_argument('-sv', '--server-version', help="Displays server version from configuration file and exits", action='store_true')
@@ -1568,6 +1651,7 @@ if __name__ == '__main__':
                         action='store_true')
     parser.add_argument('-s', '--stats', help='Displays statistics on the selected version and build', action='store_true')
     parser.add_argument('-V', '--script-version', help='Displays script version', version=__version__, action='version')
+    parser.add_argument('-u', '--upgrade', help='Upgrades this script to a new version if necessary, and exits', action='store_true')
 
     # Deprecated arguments - Included for compatibility, but do nothing
 
@@ -1594,6 +1678,18 @@ if __name__ == '__main__':
                          version=args.iv, build=args.ib, integrity=args.no_integrity)
 
     update_available = True
+
+    # Determine if we should upgrade:
+
+    if args.upgrade:
+    
+        upgrade_script(serv)
+        
+        sys.exit()
+
+    # Start the server updater
+
+    serv.start()
 
     # Figure out the output name:
 
