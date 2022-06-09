@@ -4,11 +4,11 @@ import sys
 
 # Before we do ANYTHING, we check to make sure python is the correct version!
 
-if sys.version_info < (3,6,0):
+if sys.version_info < (3,7,0):
 
     sys.stdout.write("\n--== [ Invalid python version! ] ==--\n")
     sys.stdout.write("Current version: {}\n".format(version_info))
-    sys.stdout.write("Expected version: 3.6+\n")
+    sys.stdout.write("Expected version: 3.7+\n")
     sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
 
     sys.exit()
@@ -33,7 +33,7 @@ from math import ceil
 A Set of tools to automate the server update process.
 """
 
-__version__ = '2.2.0'
+__version__ = '2.2.1'
 
 # These variables contain links for the script updating process.
 
@@ -130,6 +130,8 @@ def upgrade_script(serv: ServerUpdater):
         print("# Can't upgrade frozen files!")
 
         return
+
+    serv.fileutil.path = path
 
     # Getting data:
 
@@ -572,7 +574,7 @@ class Update:
         """
         Gets RAW data from the Paper API, version info only.
 
-        We utilise some basic caching to remember responses
+        We utilize some basic caching to remember responses
         instead of calling the PaperMC API multiple times. 
 
         You can use this to get a list of valid versions,
@@ -1045,6 +1047,14 @@ class ServerUpdater:
 
         ver, build = self.version_select(args.version, args.build)
 
+        # Check if install is aborted:
+        
+        if ver == '' or build == -1:
+
+            # Error occurred, cancel stats operation
+
+            return
+
         # Get the data:
 
         data = self.update.get(ver, build)
@@ -1112,7 +1122,7 @@ class ServerUpdater:
 
         output("# Comparing local <> remote server versions ...")
 
-        if self.version != self._select(default_version, ver, 'latest', 'version', print=False) and (self.version == '0' or ver[-1] != self.version):
+        if self.version != self._select(default_version, ver, 'latest', 'version', print_output=False) and (self.version == '0' or ver[-1] != self.version):
 
             # New version available!
 
@@ -1153,7 +1163,7 @@ class ServerUpdater:
 
         output("# Comparing local <> remote builds ...")
 
-        if self.buildnum != self._select(default_build, build, 'latest', 'buildnum', print=False) and (self.buildnum == 0 or build[-1] != self.buildnum):
+        if self.buildnum != self._select(default_build, build, 'latest', 'buildnum', print_output=False) and (self.buildnum == 0 or build[-1] != self.buildnum):
 
             # New build available!
 
@@ -1192,7 +1202,7 @@ class ServerUpdater:
 
         if new_default == '-1':
 
-            # Convert into something more redable:
+            # Convert into something more readable:
 
             new_default: str = 'latest'
 
@@ -1292,6 +1302,26 @@ class ServerUpdater:
             # Report the error
 
             error_report(e)
+
+            return '', -1
+
+        # Check if their are no builds:
+        
+        if len(nums) == 0:
+            
+            # No builds available, abort:
+            
+            print("# No builds available!")
+            print("\nThe version you have selected has no builds available.")
+            print("This could be because the version you are attempting to install is too new or old.")
+            print("The best solution is to either wait for a build to be produced for your version,")
+            print("Or select a different version instead.")
+            
+            print("\nTo see if a specific version has builds, you can issue the following command:\n")
+            print("python server_update.py -nc --version [version]")
+            print("\nSimply replace [version] with the version you wish to check.")
+            print("This message will appear again if there are still no builds available.")
+            print("The script will now exit.")
 
             return '', -1
 
@@ -1520,7 +1550,7 @@ class ServerUpdater:
 
         return
 
-    def _select(self, val: Any, choice: Sequence[Any], default: str, name: str, print: bool=True) -> Union[str, None]:
+    def _select(self, val: Any, choice: Sequence[Any], default: str, name: str, print_output: bool=True) -> Union[str, None]:
         """
         Selects a value from the choices.
         We support updater keywords,
@@ -1534,8 +1564,8 @@ class ServerUpdater:
         :type default: str
         :param name: Name of value we are choosing
         :type name: str
-        :param print: Boolean determining if we output choices
-        :type print: bool
+        :param print_output: Boolean determining if we output choices
+        :type print_output: bool
         :return: Selected value, None if invalid
         :rtype: str, None
         """
@@ -1550,7 +1580,7 @@ class ServerUpdater:
 
             # User wants latest
 
-            if print:
+            if print_output:
 
                 output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
 
@@ -1574,7 +1604,7 @@ class ServerUpdater:
 
             # User selected invalid option
 
-            if print:
+            if print_output:
 
                 output("\n# Error: Invalid {} selected!".format(name))
 
@@ -1582,7 +1612,7 @@ class ServerUpdater:
 
         # Option selected is valid. Continue
 
-        if print:
+        if print_output:
 
             output("# Selecting {}: [{}] ...".format(name, val))
 
@@ -1682,6 +1712,8 @@ if __name__ == '__main__':
     # Determine if we should upgrade:
 
     if args.upgrade:
+    
+        output("Checking for script update ...")
     
         upgrade_script(serv)
         

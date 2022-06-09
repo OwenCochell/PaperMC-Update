@@ -1,5 +1,19 @@
 # Changelog 
 
+## 2.2.1
+
+Bug Fixes:
+
+  - Changed the lowest required version from 3.6 to 3.7.
+  - Fixed bug where script crashes if no builds are available for the selected version.
+      We now display a message and exit.
+  - Fixed bug where option '--stats' fails if the selected version and build are invalid.
+
+Other Fixes:
+
+  - Changed the lowest version required in the readme.
+  - Fixed some errors and typos in the readme
+
 ## 2.2.0
 
 Features Added:

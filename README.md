@@ -10,7 +10,7 @@ Check out the [PaperMC Documentation](https://paper.readthedocs.io/en/latest/),
 
 # Prerequisites
 
-You must have Python 3.6+ installed. It should come pre-installed on most linux systems. 
+You must have Python 3.7+ installed. It should come pre-installed on most linux systems. 
 This script has no other dependencies, so all you need is python! Instructions for installation are below:
 
 ## Linux:
@@ -25,7 +25,7 @@ Or use whatever package manager is installed on your system.
 The only important part is specifying python3.9!
 
 You don't have to install the latest version of python for this script to work, but I highly recommend you do so!
-Again, we require python 3.6 or above.
+Again, we require python 3.7 or above.
 
 
 ## Windows:
@@ -34,7 +34,7 @@ Windows users can download python [here](https://www.python.org/downloads/window
 although we recommend you add python to your PATH environment variable, as this makes using python much easier.
 
 More information on installing/configuring python can be found [here](https://www.python.org/downloads/)
-(Any python 3.6+ version works, although I recommend python 3.9).
+(Any python 3.7+ version works, although I recommend python 3.9).
 
 We also supply windows binaries that can be ran directly on windows systems without python!
 We use [PyInstaller](https://www.pyinstaller.org/) to build these binaries, and they are built using the one file option, or '-F'.
@@ -59,7 +59,7 @@ Again, the installation is very straightforward, but more information can be fou
 # Note on Python Versions:
 
 In some systems, the 'python' command may point to an older version of python.
-As stated above, we require python 3.6 or above, so it may be necessary to manually specify the python version to use.
+As stated above, we require python 3.7 or above, so it may be necessary to manually specify the python version to use.
 
 This can be done like so:
 
@@ -76,7 +76,7 @@ To find the version of python your command points to, you can check it's version
 
 >python --version
 
-If it is below 3.6, then you will have to manually specify the version to run!
+If it is below 3.7, then you will have to manually specify the version to run!
 
 From this point on, we will use the default 'python' command in our examples,
 assuming that it's a valid python version.
@@ -108,6 +108,8 @@ the `--interactive` flag for this.
 4. The selected version is downloaded to a temporary directory located somewhere on your computer
 (This directory is generated using the python tempfile module, meaning that it will be generated in a safe, 
 unobtrusive manner, and will be automatically removed at termination of the script).
+
+    If the version selected has no available builds, then the script will print a warning and exit.
 5. The integrity of the file will be checked using the SHA256 hash provided by the PaperMC API.
 If this check fails, the install will cancel.
 6. The currently installed version of the server is backed up to the temporary directory, and deleted.
@@ -190,7 +192,7 @@ that can be used to do special things.
 
 The `latest` keyword will automatically select the latest option available.
 
-The `current` keyword will automatically select the currently installed currently installed value.
+The `current` keyword will automatically select the currently installed value.
 
 For example, lets say you have paper version 1.17 and build 60 installed.
 If you want to get the latest build while maintaining your installed version,
@@ -205,7 +207,6 @@ will never change, regardless of what you have installed.
 These keywords can be used in the interactive menu as well.
 You can also use these keywords for selecting the build,
 although using the `current` keyword for build selection is not recommended! 
-
 
 ## Upgrading the Script
 
@@ -341,14 +342,11 @@ Check to see if a newer version is available, does not install:
 Display currently installed server version:
 >python server_update.py --server-version [PATH]
 
-Display stats on currently installed server version before installation:
->python server_update.py --stats [PATH]
+Display stats on version 1.16.5 build 432 before installation if update is available:
+>python server_update.py --stats --version 1.16.5 --build 432 [PATH]
 
-Display stats on version 1.16.5 build 435 before installation:
->python server_update.py --stats --version 1.16.5 --build 435 [PATH]
-
-Display stats on installed version without installing:
->python server_update.py --check-only [PATH]
+Display stats on version 1.16.5 build 432 without installing anything:
+>python server_update.py --stats --version 1.16.5, --build 432 -c -nc
 
 Install a paper jar at the given location, without going through the update process.
 Great if you want to set up a new server install.
