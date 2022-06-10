@@ -1310,13 +1310,13 @@ class ServerUpdater:
         if len(nums) == 0:
             
             # No builds available, abort:
-            
+
             print("# No builds available!")
             print("\nThe version you have selected has no builds available.")
             print("This could be because the version you are attempting to install is too new or old.")
             print("The best solution is to either wait for a build to be produced for your version,")
             print("Or select a different version instead.")
-            
+
             print("\nTo see if a specific version has builds, you can issue the following command:\n")
             print("python server_update.py -nc --version [version]")
             print("\nSimply replace [version] with the version you wish to check.")
@@ -1468,7 +1468,7 @@ class ServerUpdater:
             print("The file integrity check failed!")
             print("This means that the file downloaded is corrupted or damaged in some way.")
             print("Your current install (if one is targeted) has not been altered.")
-            print("\nThere are many diffrent causes for this error to occur.")
+            print("\nThere are many different causes for this error to occur.")
             print("It is likely that this is a one-off event.")
             print("Try again, and if this command continues to fail,")
             print("then your network or device might have a problem.")
