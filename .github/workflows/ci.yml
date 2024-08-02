@@ -10,6 +10,7 @@ jobs:
         runs-on: windows-latest
         steps:
             - name: PyInstaller Action
+              id: pyinstall
               uses: Martin005/pyinstaller-action@v1.2.0
               with:
                 spec: server_update.py
@@ -17,5 +18,5 @@ jobs:
             - name: Upload Release
               uses: AButler/upload-release-assets@v3.0
               with:
-                files: ${{ steps.step1.outputs.executable_path }}
+                files: ${{ steps.pyinstall.outputs.executable_path }}
                 repo-token: ${{ secrets.GITHUB_TOKEN }}
