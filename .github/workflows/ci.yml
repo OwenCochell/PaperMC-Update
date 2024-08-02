@@ -14,9 +14,10 @@ jobs:
               uses: Martin005/pyinstaller-action@v1.2.0
               with:
                 spec: server_update.py
-                options: --onefile, --name "PaperMC-Update"
+                exe_path: dist
+                options: --onefile, --name "server_update"
             - name: Upload Release
               uses: AButler/upload-release-assets@v3.0
               with:
-                files: ${{ steps.pyinstall.outputs.executable_path }}
+                files: "dist/server_update.exe"
                 repo-token: ${{ secrets.GITHUB_TOKEN }}
