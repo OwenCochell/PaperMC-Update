@@ -33,7 +33,7 @@ from math import ceil
 A Set of tools to automate the server update process.
 """
 
-__version__ = '2.2.1'
+__version__ = '2.2.2'
 
 # These variables contain links for the script updating process.
 
@@ -42,28 +42,38 @@ GITHUB_RELEASE = 'https://api.github.com/repos/Owen-Cochell/PaperMC-Update/relea
 GITHUB_RAW = 'https://raw.githubusercontent.com/Owen-Cochell/PaperMC-Update/master/server_update.py'
 
 
-def load_config(config: str) -> Tuple[str, int]:
+def load_config_old(config: dict) -> Tuple[str, int]:
     """
     Loads configuration data from the given file.
 
     We only load version info if it's in the official format!
     We return the version and build number found in the configuration file.
 
-    :param config: Path to config file
-    :type config: str
-    :return: Tuple contaning version and build data respectively
+    This function looks for config data in the old format,
+    which at this time seems to be pre 1.21 (TODO: Confirm)
+    We preform a check to see if the data looks correct,
+    the current version string MUST start with 'git-Paper',
+    otherwise we will raise a value error. 
+
+    :param config: JSON data to consider
+    :type config: dict
+    :return: Tuple containing version and build data respectively
     :rtype: Tuple[str, int]
     """
 
-    # Exists and is file, read it
-
-    file = open(config, 'r')
-
-    data = json.load(file)
+    OLD_PREFIX = 'git-Paper'  # Old prefix
 
     # Read the data, and attempt to pull some info out of it
 
-    current = data['currentVersion']
+    current = config['currentVersion']
+
+    # Ensure string prefix is correct:
+
+    if not OLD_PREFIX == current[:len(OLD_PREFIX)]:
+
+        # Does not match! Must be invalid ...
+
+        raise ValueError("Invalid old config data format!")
 
     # Splitting the data in two so we can pull some content out:
 
@@ -76,6 +86,43 @@ def load_config(config: str) -> Tuple[str, int]:
     # Getting version information:
 
     version = version[5:-1]
+
+    # Returning version information:
+
+    return version, build
+
+
+def load_config_new(config: dict) -> Tuple[str, int]:
+    """
+    Loads configuration data from the given file.
+
+    We only load version info if it's in the official format!
+    We return the version and build number found in the configuration file.
+
+    This function looks for config data in the new format,
+    which at this time seems to be post 1.21 (TODO: Confirm)
+
+    :param config: JSON data to consider
+    :type config: dict
+    :return: Tuple containing version and build data respectively
+    :rtype: Tuple[str, int]
+    """
+
+    # Read the data, and attempt to pull some info out of it
+
+    current = config['currentVersion']
+
+    # Splitting the data in two so we can pull some content out:
+
+    split = current.split(" ")[0].split("-")
+
+    # Getting build information:
+
+    build = int(split[1])
+
+    # Getting version information:
+
+    version = split[0]
 
     # Returning version information:
 
@@ -717,31 +764,55 @@ class FileUtil:
 
         output("# Loading configuration data from file [{}] ...".format(config))
 
-        if os.path.isfile(config):
-
-            try:
-
-                return load_config(config)
-
-            except JSONDecodeError:
-
-                # Data not in valid JSON format.
-
-                output("# Failed to load config data - Not in JSON format!")
-
-                return '0', 0
-
-            except Exception:
-
-                # Extra weird errors due to formatting issues:
-
-                output("# Failed to load config data - Strange format, we support official builds only!")
-
-                return '0', 0
-
-        else:
+        if not os.path.isfile(config):
 
             print("# Unable to load config data from file at [{}] - Not found/Not a file!".format(config))
+
+            return '0', 0
+
+        # Load file content
+
+        try:
+
+            # Open file
+
+            with open(config, 'r') as file:
+
+                # Decode file
+
+                data = json.load(file)
+
+        except JSONDecodeError:
+
+            # Data not in valid JSON format.
+
+            output("# Failed to load config data - Not in JSON format!")
+
+            return '0', 0
+
+        try:
+
+            # First, try old format...
+
+            return load_config_old(data)
+
+        except Exception:
+
+            # Did not work, try something else ...
+
+            pass
+
+        # Try new format:
+
+        try:
+
+            return load_config_new(data)
+
+        except Exception:
+
+            # Extra weird errors due to formatting issues:
+
+            output("# Failed to load config data - Strange format, we support official builds only!")
 
             return '0', 0
 

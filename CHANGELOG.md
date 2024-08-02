@@ -1,5 +1,16 @@
 # Changelog 
 
+## 2.2.2
+
+Bug Fixes:
+
+  - Now reads new version info format
+    - Caused config version load failures 
+
+Other Fixes:
+
+  - Minor refractor and documentation change
+
 ## 2.2.1
 
 Bug Fixes:

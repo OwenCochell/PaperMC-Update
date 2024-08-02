@@ -1,0 +1,21 @@
+name: Package with pyinstaller and add to release
+
+on:
+    workflow_dispatch:
+    release:
+        types: [published]
+
+jobs:
+    pyinstaller-build:
+        runs-on: windows-latest
+        steps:
+            - name: PyInstaller Action
+              uses: Martin005/pyinstaller-action@v1.2.0
+              with:
+                spec: server_update.py
+                options: --onefile, --name "PaperMC-Update"
+            - name: Upload Release
+              uses: AButler/upload-release-assets@v3.0
+              with:
+                files: ${{ steps.step1.outputs.executable_path }}
+                repo-token: ${{ secrets.GITHUB_TOKEN }}
