@@ -9,7 +9,7 @@ Bug Fixes:
 
 Other Fixes:
 
-  - Minor refractor and documentation change
+  - Minor refactor and documentation change
 
 ## 2.2.1
 
