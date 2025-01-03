@@ -1,5 +1,11 @@
 # Changelog 
 
+## 2.2.3
+
+Bug Fixes:
+
+  - Now uses correct API URL
+
 ## 2.2.2
 
 Bug Fixes:

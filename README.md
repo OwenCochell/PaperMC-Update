@@ -88,8 +88,7 @@ You may run the script like so:
 
 > python server_update.py [PATH]
 
-Where [PATH] is the path to your paperclip.jar file. More info on the paperclip.jar format can be found 
-[here](https://paper.readthedocs.io/en/latest/about/structure.html#id2). 
+Where [PATH] is the path to your paperclip.jar file.
 By default, when a new file is downloaded, 
 it will be installed to this path under the same name.
 
@@ -100,7 +99,7 @@ This script only supports official builds of the paper server, meaning that we m
 information for un-official builds). If no configuration data is found, and version info is not supplied via the 
 command line, then the version and build for the currently installed server will default to 0.
 2. Check for a new version/build using the 
-[PaperMC download API](https://paper.readthedocs.io/en/latest/site/api.html#downloads-api).
+[PaperMC download API](https://docs.papermc.io/misc/downloads-api).
 3. If a new version/build is available, the default version and build(usually the latest) will be installed.
 If you wish to select a version/build to install, then you can use '--version' and '--build' arguments to specify this. 
 Alternatively, the user can be prompted to manually select which version/build they want to be installed. You can use 

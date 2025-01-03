@@ -33,7 +33,7 @@ from math import ceil
 A Set of tools to automate the server update process.
 """
 
-__version__ = '2.2.2'
+__version__ = '2.2.3'
 
 # These variables contain links for the script updating process.
 
@@ -326,7 +326,7 @@ class Update:
 
     def __init__(self):
 
-        self._base = 'https://papermc.io/api/v2/projects/paper'  # Base URL to build of off
+        self._base = 'https://api.papermc.io/v2/projects/paper'  # Base URL to build of off
         self._headers = {
              'Content-Type': 'application/json;charset=UTF-8',
              'Accept': 'application/json, text/plain, */*',
