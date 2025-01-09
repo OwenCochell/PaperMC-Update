@@ -1,8 +1,9 @@
 # Creepers Reason for Forking PaperMC-Update :
 
 -ba / --batch :   
-Log-friendly output with no downloading animation, blank lines removed, and filtering out some output mainly used for batch files.   
-You can optionally choose to redirect output (>>) to your logs with minimal output.  see [BEFORE AND AFTER IMAGE EXAMPLES](https://i.ibb.co/58tbsYr/batch.jpg)   
+Log-friendly output with no downloading animation, blank lines removed, and filtering out some output
+    mainly used for batch files.  You can optionally choose to redirect output (>>) to your logs with 
+    minimal output.  see [BEFORE AND AFTER IMAGE EXAMPLES](https://i.ibb.co/58tbsYr/batch.jpg)   
        Note:  --quiet or any other 'normal' mode will function as it always has. These remain untouched.
 
 errorlevel 88 :   
