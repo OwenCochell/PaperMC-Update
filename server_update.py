@@ -202,6 +202,11 @@ def upgrade_script(serv: ServerUpdater):
 
     output("# Script update complete!\n")
 
+filterArray = [
+    "[PaperMC", "[Handles", "[Written", "[ --== Installation", "[ --== Paper", "# Loading build", "# Removed",
+    "[ --== Checking", "|  ", "[ --== Version", "[ --== Starting", "[ --== Download", "[ --== End", "# Done",
+    "# Selecting latest", "*****", "+====", "# Temporary", "# Saved", "# Loading version"
+]
 
 def output(text: str):
 
@@ -210,11 +215,17 @@ def output(text: str):
     will not print content if we are in quiet mode.
     """
 
-    if not args.quiet:
+    if args.quiet:
+        return
 
-        # We are not quieted, print the content
+    if args.batch:
+        if not text.strip():
+            return
+        for pattern in filterArray:
+            if pattern in text:
+                return
 
-        print(text)
+    print(text.strip() if args.batch else text)
 
 
 def error_report(exc, net: bool=False):
@@ -300,13 +311,14 @@ def progress_bar(length: int, stepsize: int, total_steps: int, step: int, prefix
 
     # Rendering progress bar:
 
-    if not args.quiet:
+    if args.quiet or args.batch:
+        return
 
-        sys.stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
+    sys.stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
                                                         (step*stepsize if step < total_steps - 1 else length), length))
-        sys.stdout.flush()
+    sys.stdout.flush()
 
-    if not args.quiet and step >= total_steps - 1 :
+    if step >= total_steps - 1 :
 
         sys.stdout.write("\n")
         sys.stdout.flush()
@@ -1191,7 +1203,7 @@ class ServerUpdater:
 
             return False
 
-        output("# Comparing local <> remote server versions ...")
+        output("# Comparing local <> remote versions ...")
 
         if self.version != self._select(default_version, ver, 'latest', 'version', print_output=False) and (self.version == '0' or ver[-1] != self.version):
 
@@ -1444,7 +1456,7 @@ class ServerUpdater:
 
                 return '', -1
 
-        output("\nYou have selected:")
+        output("\nSelection made:")
         output("   > Version: [{}]".format(ver))
         output("   > Build: [{}]".format(build))
 
@@ -1751,6 +1763,7 @@ if __name__ == '__main__':
     parser.add_argument('-q', '--quiet', help="Will only output errors and interactive questions to the terminal",
                         action='store_true')
     parser.add_argument('-s', '--stats', help='Displays statistics on the selected version and build', action='store_true')
+    parser.add_argument('-ba', '--batch', help='Log-friendly output mainly for batch scripts', action='store_true')
     parser.add_argument('-V', '--script-version', help='Displays script version', version=__version__, action='version')
     parser.add_argument('-u', '--upgrade', help='Upgrades this script to a new version if necessary, and exits', action='store_true')
 
@@ -1842,3 +1855,5 @@ if __name__ == '__main__':
 
         serv.get_new(default_version=args.version, default_build=args.build, backup=not (args.no_backup or args.new),
                     new=args.new, output_name=name, target_copy=args.copy_old)
+
+        sys.exit(88)

@@ -1,3 +1,18 @@
+# Creepers Reason for Forking PaperMC-Update :
+
+-ba / --batch :   
+Log-friendly output with no downloading animation, blank lines removed, and filtering out some output mainly used for batch files.   
+You can optionally choose to redirect output (>>) to your logs with minimal output.  see [BEFORE AND AFTER IMAGE EXAMPLES](https://i.ibb.co/58tbsYr/batch.jpg)   
+       Note:  --quiet or any other 'normal' mode will function as it always has. These remain untouched.
+
+errorlevel 88 :   
+After paper.jar has an update it will Exit in a Normal state with Errorlevel 88.   
+This can be used by batch files to trigger 'GOTO UPDATE-FOUND' in the batch script.
+
+        PYTHON C:\Minecraft\Scripts\server_update.py --batch C:\Minecraft\paper.jar >> C:\Minecraft\logs\latest.log
+        IF %ERRORLEVEL% EQU 88 GOTO NEWPAPERFOUND
+        GOTO SAMEPAPER
+
 # PaperMC-Update
 
 A simple CLI script that can check, download, and install PaperMC jar files.
@@ -180,6 +195,9 @@ Copies the old file to a new location before the installation process:
 
 Displays stats on the selected version and build:
 >-s, --stats
+
+Log-friendly output with filtering and no downloading animation.
+>-ba, --batch
 
 Checks GitHub for a new version of this script, and upgrades if necessary:
 >-u, --upgrade
