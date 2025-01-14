@@ -11,7 +11,7 @@ if sys.version_info < (3,7,0):
     sys.stdout.write("Expected version: 3.7+\n")
     sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
 
-    sys.exit()
+    sys.exit(4)
 
 import tempfile
 import urllib.request
@@ -1801,7 +1801,7 @@ if __name__ == '__main__':
     
         upgrade_script(serv)
         
-        sys.exit()
+        sys.exit(6)
 
     # Start the server updater
 
