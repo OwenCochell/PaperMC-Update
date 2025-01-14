@@ -326,13 +326,21 @@ This will automatically disable old file deletion and backup.
 The newly downloaded file will simply be moved to the target directory,
 and will not be renamed(unless otherwise instructed by the '-o' parameter).
 
-## Errorlevel 8 :   
+## Errorlevels:  
 After paper.jar has an update it will Exit in a Normal state with Errorlevel 8.
 This can be used by batch files to trigger 'GOTO UPDATE-FOUND' in the batch script.   
-NOTE:  if no update is found Errorlevel 0 is used. These are the only two Errorlevels (8 or 0) currently supported.
+
+Current Errorlevels Supported :   
+0 - Normal Exit- No MC Update   
+4 - Critical Error- Python Version Too Low   
+6 - Normal Exit- Server_Update.py was Updated   
+8 - Normal Exit- New MC Version Found   
 
         PYTHON server_update.py C:\Minecraft\paper.jar
         IF %ERRORLEVEL% EQU 8 GOTO NEWPAPERFOUND
+        IF %ERRORLEVEL% EQU 6 GOTO SERVERUPDATE
+        IF %ERRORLEVEL% EQU 4 GOTO ERRORPYTHON
+        IF %ERRORLEVEL% EQU 0 GOTO SAMEPAPER
         GOTO SAMEPAPER
 
 # Examples:
