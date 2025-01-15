@@ -1863,7 +1863,7 @@ if __name__ == '__main__':
 
         # Already printed it, lets exit
 
-        exit()
+        sys.exit(10)
 
     # Check for displaying stats:
 
