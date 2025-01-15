@@ -331,16 +331,18 @@ After paper.jar has an update it will Exit in a Normal state with Errorlevel 8.
 This can be used by batch files to trigger 'GOTO UPDATE-FOUND' in the batch script.   
 
 Current Errorlevels Supported :   
-0 - Normal Exit- No MC Update   
-4 - Critical Error- Python Version Too Low   
-6 - Normal Exit- Server_Update.py was Updated   
-8 - Normal Exit- New MC Version Found   
+0 - Normal Exit- New MC Version Found   
+2 - No Internet Connection Found   
+3 - Critical Error- Python Version Too Low   
+9 - Normal Exit- Server_Update.py was Updated   
+10 - Normal Exit- No MC Update   
 
         PYTHON server_update.py C:\Minecraft\paper.jar
-        IF %ERRORLEVEL% EQU 8 GOTO NEWPAPERFOUND
-        IF %ERRORLEVEL% EQU 6 GOTO SERVERUPDATE
-        IF %ERRORLEVEL% EQU 4 GOTO ERRORPYTHON
-        IF %ERRORLEVEL% EQU 0 GOTO SAMEPAPER
+        IF %ERRORLEVEL% EQU 10 GOTO SAMEPAPER
+        IF %ERRORLEVEL% EQU 9 GOTO SERVERUPDATE
+        IF %ERRORLEVEL% EQU 3 GOTO ERRORPYTHON
+        IF %ERRORLEVEL% EQU 2 GOTO ERRORINTERNET
+        IF %ERRORLEVEL% EQU 0 GOTO NEWPAPERFOUND
         GOTO SAMEPAPER
 
 # Examples:

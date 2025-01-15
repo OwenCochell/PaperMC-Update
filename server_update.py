@@ -1,26 +1,14 @@
 from __future__ import annotations
-
 import sys
-
-# Before we do ANYTHING, we check to make sure python is the correct version!
-
-if sys.version_info < (3,7,0):
-
-    sys.stdout.write("\n--== [ Invalid python version! ] ==--\n")
-    sys.stdout.write("Current version: {}\n".format(version_info))
-    sys.stdout.write("Expected version: 3.7+\n")
-    sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
-
-    sys.exit(4)
-
 import tempfile
 import urllib.request
 import os
+import platform
 import shutil
 import json
 import traceback
 import argparse
-
+import subprocess
 from urllib.error import URLError
 from http.client import HTTPResponse
 from hashlib import sha256
@@ -40,6 +28,50 @@ __version__ = '2.2.3'
 GITHUB = 'https://github.com/Owen-Cochell/PaperMC-Update'
 GITHUB_RELEASE = 'https://api.github.com/repos/Owen-Cochell/PaperMC-Update/releases/latest'
 GITHUB_RAW = 'https://raw.githubusercontent.com/Owen-Cochell/PaperMC-Update/master/server_update.py'
+
+# Before we do ANYTHING, we check to make sure python is the correct version!
+
+if sys.version_info < (3,7,0):
+
+    sys.stdout.write("\n--== [ Invalid python version! ] ==--\n")
+    sys.stdout.write("Current version: {}\n".format(version_info))
+    sys.stdout.write("Expected version: 3.7+\n")
+    sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
+
+    sys.exit(3)
+
+
+def check_internet_connection():
+    """
+    Checks for internet connection by pinging 8.8.8.8.
+    If the connection fails, an error message with the reason is displayed,
+    and the program exits with status code 2.
+    """
+    try:
+        if platform.system().lower() == "windows":
+            # Windows-specific ping command
+            result = subprocess.run(
+                ["ping", "-n", "4", "8.8.8.8"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+        else:
+            # Unix/Linux/macOS ping command
+            result = subprocess.run(
+                ["ping", "-c", "4", "-W", "2", "8.8.8.8"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+
+        if result.returncode != 0:
+            # Ping failed; print error message and exit
+            print("ERROR: No Internet Connection.")
+            sys.exit(2)
+        
+    except Exception as e:
+        # Catch unexpected exceptions and display the error
+        print("ERROR: Unable to check internet connection.")
+        sys.exit(2)
 
 
 def load_config_old(config: dict) -> Tuple[str, int]:
@@ -1720,6 +1752,8 @@ class ServerUpdater:
 if __name__ == '__main__':
 
     # Ran as script
+    
+    check_internet_connection()
 
     parser = argparse.ArgumentParser(description='PaperMC Server Updater.',
                                      epilog="Please check the github page for more info: "
@@ -1801,7 +1835,7 @@ if __name__ == '__main__':
     
         upgrade_script(serv)
         
-        sys.exit(6)
+        sys.exit(9)
 
     # Start the server updater
 
@@ -1856,8 +1890,8 @@ if __name__ == '__main__':
         serv.get_new(default_version=args.version, default_build=args.build, backup=not (args.no_backup or args.new),
                     new=args.new, output_name=name, target_copy=args.copy_old)
 
-        sys.exit(8)
+        sys.exit(0)
 
     else:
 
-        sys.exit(0)
+        sys.exit(10)
