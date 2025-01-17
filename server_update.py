@@ -1,20 +1,41 @@
 from __future__ import annotations
+
 import sys
+
+# Before we do ANYTHING, we check to make sure python is the correct version!
+
+if sys.version_info < (3,7,0):
+
+    sys.stdout.write("\n--== [ Invalid python version! ] ==--\n")
+    sys.stdout.write("Current version: {}\n".format(version_info))
+    sys.stdout.write("Expected version: 3.7+\n")
+    sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
+
+    sys.exit(3)
+
 import tempfile
 import urllib.request
 import os
-import platform
 import shutil
 import json
 import traceback
 import argparse
+import platform
 import subprocess
+
 from urllib.error import URLError
 from http.client import HTTPResponse
 from hashlib import sha256
 from typing import Any, Callable, List, Sequence, Tuple, Union
 from json.decoder import JSONDecodeError
 from math import ceil
+
+
+filterArray = [
+    "[PaperMC", "[Handles", "[Written", "[ --== Installation", "[ --== Paper", "# Loading build", "# Removed",
+    "[ --== Checking", "|  ", "[ --== Version", "[ --== Starting", "[ --== Download", "[ --== End", "# Done",
+    "# Selecting latest", "*****", "+====", "# Temporary", "# Saved", "# Loading version"
+]
 
 
 """
@@ -28,17 +49,6 @@ __version__ = '2.2.3'
 GITHUB = 'https://github.com/Owen-Cochell/PaperMC-Update'
 GITHUB_RELEASE = 'https://api.github.com/repos/Owen-Cochell/PaperMC-Update/releases/latest'
 GITHUB_RAW = 'https://raw.githubusercontent.com/Owen-Cochell/PaperMC-Update/master/server_update.py'
-
-# Before we do ANYTHING, we check to make sure python is the correct version!
-
-if sys.version_info < (3,7,0):
-
-    sys.stdout.write("\n--== [ Invalid python version! ] ==--\n")
-    sys.stdout.write("Current version: {}\n".format(version_info))
-    sys.stdout.write("Expected version: 3.7+\n")
-    sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
-
-    sys.exit(3)
 
 
 def check_internet_connection():
@@ -67,7 +77,7 @@ def check_internet_connection():
             # Ping failed; print error message and exit
             print("ERROR: No Internet Connection.")
             sys.exit(2)
-        
+
     except Exception as e:
         # Catch unexpected exceptions and display the error
         print("ERROR: Unable to check internet connection.")
@@ -234,11 +244,6 @@ def upgrade_script(serv: ServerUpdater):
 
     output("# Script update complete!\n")
 
-filterArray = [
-    "[PaperMC", "[Handles", "[Written", "[ --== Installation", "[ --== Paper", "# Loading build", "# Removed",
-    "[ --== Checking", "|  ", "[ --== Version", "[ --== Starting", "[ --== Download", "[ --== End", "# Done",
-    "# Selecting latest", "*****", "+====", "# Temporary", "# Saved", "# Loading version"
-]
 
 def output(text: str):
 
@@ -1752,7 +1757,7 @@ class ServerUpdater:
 if __name__ == '__main__':
 
     # Ran as script
-    
+
     check_internet_connection()
 
     parser = argparse.ArgumentParser(description='PaperMC Server Updater.',
@@ -1863,7 +1868,7 @@ if __name__ == '__main__':
 
         # Already printed it, lets exit
 
-        sys.exit(10)
+        exit(10)
 
     # Check for displaying stats:
 
