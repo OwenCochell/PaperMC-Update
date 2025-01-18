@@ -30,13 +30,7 @@ from typing import Any, Callable, List, Sequence, Tuple, Union
 from json.decoder import JSONDecodeError
 from math import ceil
 
-
-filterArray = [
-    "[PaperMC", "[Handles", "[Written", "[ --== Installation", "[ --== Paper", "# Loading build", "# Removed",
-    "[ --== Checking", "|  ", "[ --== Version", "[ --== Starting", "[ --== Download", "[ --== End", "# Done",
-    "# Selecting latest", "*****", "+====", "# Temporary", "# Saved", "# Loading version"
-]
-
+FilterArray = []      # Exclude Output during --batch mode ... ["word1", "pattern2", etc]
 
 """
 A Set of tools to automate the server update process.
@@ -258,7 +252,7 @@ def output(text: str):
     if args.batch:
         if not text.strip():
             return
-        for pattern in filterArray:
+        for pattern in FilterArray:
             if pattern in text:
                 return
 
@@ -889,7 +883,9 @@ class FileUtil:
         :type new: bool
         """
 
-        output("\n[ --== Installation: ==-- ]\n")
+        if not args.batch:
+        
+            output("\n[ --== Installation: ==-- ]\n")
 
         # Checking if we should copy the old file:
 
@@ -974,7 +970,9 @@ class FileUtil:
 
                     return False
 
-            output("# Removed original file!")
+            if not args.batch:
+
+                output("# Removed original file!")
 
         # Copying downloaded file to root:
 
@@ -1007,9 +1005,11 @@ class FileUtil:
 
             return False
 
-        output("# Done copying download data to root directory!")
+        if not args.batch:
 
-        output("\n[ --== Installation complete! ==-- ]")
+            output("# Done copying download data to root directory!")
+
+            output("\n[ --== Installation complete! ==-- ]")
 
         return True
 
@@ -1210,7 +1210,9 @@ class ServerUpdater:
         :return: True is new version, False if not/error
         """
 
-        output("[ --== Checking For New Version: ==-- ]\n")
+        if not args.batch:
+            
+            output("[ --== Checking For New Version: ==-- ]\n")
 
         # Checking for new server version
 
@@ -1247,7 +1249,10 @@ class ServerUpdater:
             # New version available!
 
             output("# New Version available! - [Version: {}]".format(ver[-1]))
-            output("\n[ --== Version check complete! ==-- ]")
+
+            if not args.batch:
+ 
+                output("\n[ --== Version check complete! ==-- ]")
 
             return True
 
@@ -1255,7 +1260,9 @@ class ServerUpdater:
 
         # Checking builds
 
-        output("# Loading build information ...")
+        if not args.batch:
+
+            output("# Loading build information ...")
 
         try:
 
@@ -1288,12 +1295,18 @@ class ServerUpdater:
             # New build available!
 
             output("# New build available! - [Build: {}]".format(build[-1]))
-            output("\n[ --== Version check complete! ==-- ]")
+
+            if not args.batch:
+
+                output("\n[ --== Version check complete! ==-- ]")
 
             return True
 
         output("# No new builds found.")
-        output("\n[ --== Version check complete! ==-- ]")
+
+        if not args.batch:
+
+            output("\n[ --== Version check complete! ==-- ]")
 
         return False
 
@@ -1316,7 +1329,9 @@ class ServerUpdater:
 
             return self.version_install, self.build_install
 
-        output("\n[ --== Version Selection: ==-- ]\n")
+        if not args.batch:
+
+            output("\n[ --== Version Selection: ==-- ]\n")
 
         new_default = str(default_build)
 
@@ -1328,7 +1343,9 @@ class ServerUpdater:
 
         # Checking if we have version information:
 
-        output("# Loading version information ...")
+        if not args.batch:
+
+            output("# Loading version information ...")
 
         try:
 
@@ -1399,7 +1416,9 @@ class ServerUpdater:
 
         # Getting build info
 
-        output("# Loading build information ...")
+        if not args.batch:
+
+            output("# Loading build information ...")
 
         try:
 
@@ -1497,7 +1516,9 @@ class ServerUpdater:
         output("   > Version: [{}]".format(ver))
         output("   > Build: [{}]".format(build))
 
-        output("\n[ --== Version Selection Complete! ==-- ]")
+        if not args.batch:
+
+            output("\n[ --== Version Selection Complete! ==-- ]")
 
         # Setting our values:
 
@@ -1561,11 +1582,15 @@ class ServerUpdater:
 
         self.fileutil.create_temp_dir()
 
-        output("# Temporary directory created at: {}".format(self.fileutil.temp.name))
+        if not args.batch:
+
+            output("# Temporary directory created at: {}".format(self.fileutil.temp.name))
 
         # Starting download process:
 
-        output("\n[ --== Starting Download: ==-- ]\n")
+        if not args.batch:
+
+            output("\n[ --== Starting Download: ==-- ]\n")
 
         try:
 
@@ -1611,9 +1636,11 @@ class ServerUpdater:
 
             output("# Integrity test passed!")
 
-        output("# Saved file to: {}".format(path))
+        if not args.batch:
 
-        output("\n[ --== Download Complete! ==-- ]")
+            output("# Saved file to: {}".format(path))
+
+            output("\n[ --== Download Complete! ==-- ]")
 
         # Determining output name:
 
@@ -1659,7 +1686,9 @@ class ServerUpdater:
 
         self.fileutil.close_temp_dir()
 
-        output("# Done cleaning temporary directory!")
+        if not args.batch:
+
+            output("# Done cleaning temporary directory!")
 
         output("\nUpdate complete!")
 
@@ -1702,7 +1731,9 @@ class ServerUpdater:
 
             if print_output:
 
-                output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
+                if not args.batch:
+
+                    output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
 
             val = choice[-1]
 
@@ -1815,17 +1846,19 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    output("+==========================================================================+")
-    output(r'''|     _____                              __  __          __      __        |
+    if not args.batch:
+
+        output("+==========================================================================+")
+        output(r'''|     _____                              __  __          __      __        |
 |    / ___/___  ______   _____  _____   / / / /___  ____/ /___ _/ /____    |
 |    \__ \/ _ \/ ___/ | / / _ \/ ___/  / / / / __ \/ __  / __ `/ __/ _ \   |
 |   ___/ /  __/ /   | |/ /  __/ /     / /_/ / /_/ / /_/ / /_/ / /_/  __/   |
 |  /____/\___/_/    |___/\___/_/      \____/ .___/\__,_/\__,_/\__/\___/    |
 |                                         /_/                              |''')
-    output("+==========================================================================+")
-    output("\n[PaperMC Server Updater]")
-    output("[Handles the checking, downloading, and installation of server versions]")
-    output("[Written by: Owen Cochell]\n")
+        output("+==========================================================================+")
+        output("\n[PaperMC Server Updater]")
+        output("[Handles the checking, downloading, and installation of server versions]")
+        output("[Written by: Owen Cochell]\n")
 
     serv = ServerUpdater(args.path, config_file=args.config_file, config=args.no_load_config or args.server_version, prompt=args.interactive,
                          version=args.iv, build=args.ib, integrity=args.no_integrity)
