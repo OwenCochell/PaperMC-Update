@@ -11,7 +11,7 @@ if sys.version_info < (3,7,0):
     sys.stdout.write("Expected version: 3.7+\n")
     sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
 
-    sys.exit()
+    sys.exit(3)
 
 import tempfile
 import urllib.request
@@ -20,6 +20,8 @@ import shutil
 import json
 import traceback
 import argparse
+import platform
+import subprocess
 
 from urllib.error import URLError
 from http.client import HTTPResponse
@@ -28,6 +30,7 @@ from typing import Any, Callable, List, Sequence, Tuple, Union
 from json.decoder import JSONDecodeError
 from math import ceil
 
+FilterArray = []      # Exclude Output during --batch mode ... ["word1", "pattern2", etc]
 
 """
 A Set of tools to automate the server update process.
@@ -40,6 +43,39 @@ __version__ = '2.2.3'
 GITHUB = 'https://github.com/Owen-Cochell/PaperMC-Update'
 GITHUB_RELEASE = 'https://api.github.com/repos/Owen-Cochell/PaperMC-Update/releases/latest'
 GITHUB_RAW = 'https://raw.githubusercontent.com/Owen-Cochell/PaperMC-Update/master/server_update.py'
+
+
+def check_internet_connection():
+    """
+    Checks for internet connection by pinging 8.8.8.8.
+    If the connection fails, an error message with the reason is displayed,
+    and the program exits with status code 2.
+    """
+    try:
+        if platform.system().lower() == "windows":
+            # Windows-specific ping command
+            result = subprocess.run(
+                ["ping", "-n", "4", "8.8.8.8"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+        else:
+            # Unix/Linux/macOS ping command
+            result = subprocess.run(
+                ["ping", "-c", "4", "-W", "2", "8.8.8.8"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+
+        if result.returncode != 0:
+            # Ping failed; print error message and exit
+            print("ERROR: No Internet Connection.")
+            sys.exit(2)
+
+    except Exception as e:
+        # Catch unexpected exceptions and display the error
+        print("ERROR: Unable to check internet connection.")
+        sys.exit(2)
 
 
 def load_config_old(config: dict) -> Tuple[str, int]:
@@ -210,11 +246,17 @@ def output(text: str):
     will not print content if we are in quiet mode.
     """
 
-    if not args.quiet:
+    if args.quiet:
+        return
 
-        # We are not quieted, print the content
+    if args.batch:
+        if not text.strip():
+            return
+        for pattern in FilterArray:
+            if pattern in text:
+                return
 
-        print(text)
+    print(text.strip() if args.batch else text)
 
 
 def error_report(exc, net: bool=False):
@@ -300,13 +342,14 @@ def progress_bar(length: int, stepsize: int, total_steps: int, step: int, prefix
 
     # Rendering progress bar:
 
-    if not args.quiet:
+    if args.quiet or args.batch:
+        return
 
-        sys.stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
+    sys.stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
                                                         (step*stepsize if step < total_steps - 1 else length), length))
-        sys.stdout.flush()
+    sys.stdout.flush()
 
-    if not args.quiet and step >= total_steps - 1 :
+    if step >= total_steps - 1 :
 
         sys.stdout.write("\n")
         sys.stdout.flush()
@@ -840,7 +883,9 @@ class FileUtil:
         :type new: bool
         """
 
-        output("\n[ --== Installation: ==-- ]\n")
+        if not args.batch:
+        
+            output("\n[ --== Installation: ==-- ]\n")
 
         # Checking if we should copy the old file:
 
@@ -925,7 +970,9 @@ class FileUtil:
 
                     return False
 
-            output("# Removed original file!")
+            if not args.batch:
+
+                output("# Removed original file!")
 
         # Copying downloaded file to root:
 
@@ -958,9 +1005,11 @@ class FileUtil:
 
             return False
 
-        output("# Done copying download data to root directory!")
+        if not args.batch:
 
-        output("\n[ --== Installation complete! ==-- ]")
+            output("# Done copying download data to root directory!")
+
+            output("\n[ --== Installation complete! ==-- ]")
 
         return True
 
@@ -1161,7 +1210,9 @@ class ServerUpdater:
         :return: True is new version, False if not/error
         """
 
-        output("[ --== Checking For New Version: ==-- ]\n")
+        if not args.batch:
+            
+            output("[ --== Checking For New Version: ==-- ]\n")
 
         # Checking for new server version
 
@@ -1191,22 +1242,27 @@ class ServerUpdater:
 
             return False
 
-        output("# Comparing local <> remote server versions ...")
+        output("# Comparing local <> remote versions ...")
 
         if self.version != self._select(default_version, ver, 'latest', 'version', print_output=False) and (self.version == '0' or ver[-1] != self.version):
 
             # New version available!
 
             output("# New Version available! - [Version: {}]".format(ver[-1]))
-            output("\n[ --== Version check complete! ==-- ]")
+
+            if not args.batch:
+ 
+                output("\n[ --== Version check complete! ==-- ]")
 
             return True
 
-        output("# No new version available.")
+        output("# No new versions found.")
 
         # Checking builds
 
-        output("# Loading build information ...")
+        if not args.batch:
+
+            output("# Loading build information ...")
 
         try:
 
@@ -1239,12 +1295,18 @@ class ServerUpdater:
             # New build available!
 
             output("# New build available! - [Build: {}]".format(build[-1]))
-            output("\n[ --== Version check complete! ==-- ]")
+
+            if not args.batch:
+
+                output("\n[ --== Version check complete! ==-- ]")
 
             return True
 
         output("# No new builds found.")
-        output("\n[ --== Version check complete! ==-- ]")
+
+        if not args.batch:
+
+            output("\n[ --== Version check complete! ==-- ]")
 
         return False
 
@@ -1267,7 +1329,9 @@ class ServerUpdater:
 
             return self.version_install, self.build_install
 
-        output("\n[ --== Version Selection: ==-- ]\n")
+        if not args.batch:
+
+            output("\n[ --== Version Selection: ==-- ]\n")
 
         new_default = str(default_build)
 
@@ -1279,7 +1343,9 @@ class ServerUpdater:
 
         # Checking if we have version information:
 
-        output("# Loading version information ...")
+        if not args.batch:
+
+            output("# Loading version information ...")
 
         try:
 
@@ -1350,7 +1416,9 @@ class ServerUpdater:
 
         # Getting build info
 
-        output("# Loading build information ...")
+        if not args.batch:
+
+            output("# Loading build information ...")
 
         try:
 
@@ -1444,11 +1512,13 @@ class ServerUpdater:
 
                 return '', -1
 
-        output("\nYou have selected:")
+        output("\nSelection made:")
         output("   > Version: [{}]".format(ver))
         output("   > Build: [{}]".format(build))
 
-        output("\n[ --== Version Selection Complete! ==-- ]")
+        if not args.batch:
+
+            output("\n[ --== Version Selection Complete! ==-- ]")
 
         # Setting our values:
 
@@ -1512,11 +1582,15 @@ class ServerUpdater:
 
         self.fileutil.create_temp_dir()
 
-        output("# Temporary directory created at: {}".format(self.fileutil.temp.name))
+        if not args.batch:
+
+            output("# Temporary directory created at: {}".format(self.fileutil.temp.name))
 
         # Starting download process:
 
-        output("\n[ --== Starting Download: ==-- ]\n")
+        if not args.batch:
+
+            output("\n[ --== Starting Download: ==-- ]\n")
 
         try:
 
@@ -1562,9 +1636,11 @@ class ServerUpdater:
 
             output("# Integrity test passed!")
 
-        output("# Saved file to: {}".format(path))
+        if not args.batch:
 
-        output("\n[ --== Download Complete! ==-- ]")
+            output("# Saved file to: {}".format(path))
+
+            output("\n[ --== Download Complete! ==-- ]")
 
         # Determining output name:
 
@@ -1610,7 +1686,9 @@ class ServerUpdater:
 
         self.fileutil.close_temp_dir()
 
-        output("# Done cleaning temporary directory!")
+        if not args.batch:
+
+            output("# Done cleaning temporary directory!")
 
         output("\nUpdate complete!")
 
@@ -1653,7 +1731,9 @@ class ServerUpdater:
 
             if print_output:
 
-                output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
+                if not args.batch:
+
+                    output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
 
             val = choice[-1]
 
@@ -1709,6 +1789,8 @@ if __name__ == '__main__':
 
     # Ran as script
 
+    check_internet_connection()
+
     parser = argparse.ArgumentParser(description='PaperMC Server Updater.',
                                      epilog="Please check the github page for more info: "
                                             "https://github.com/Owen-Cochell/PaperMC-Update.")
@@ -1751,6 +1833,7 @@ if __name__ == '__main__':
     parser.add_argument('-q', '--quiet', help="Will only output errors and interactive questions to the terminal",
                         action='store_true')
     parser.add_argument('-s', '--stats', help='Displays statistics on the selected version and build', action='store_true')
+    parser.add_argument('-ba', '--batch', help='Log-friendly output mainly for batch scripts', action='store_true')
     parser.add_argument('-V', '--script-version', help='Displays script version', version=__version__, action='version')
     parser.add_argument('-u', '--upgrade', help='Upgrades this script to a new version if necessary, and exits', action='store_true')
 
@@ -1763,17 +1846,19 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    output("+==========================================================================+")
-    output(r'''|     _____                              __  __          __      __        |
+    if not args.batch:
+
+        output("+==========================================================================+")
+        output(r'''|     _____                              __  __          __      __        |
 |    / ___/___  ______   _____  _____   / / / /___  ____/ /___ _/ /____    |
 |    \__ \/ _ \/ ___/ | / / _ \/ ___/  / / / / __ \/ __  / __ `/ __/ _ \   |
 |   ___/ /  __/ /   | |/ /  __/ /     / /_/ / /_/ / /_/ / /_/ / /_/  __/   |
 |  /____/\___/_/    |___/\___/_/      \____/ .___/\__,_/\__,_/\__/\___/    |
 |                                         /_/                              |''')
-    output("+==========================================================================+")
-    output("\n[PaperMC Server Updater]")
-    output("[Handles the checking, downloading, and installation of server versions]")
-    output("[Written by: Owen Cochell]\n")
+        output("+==========================================================================+")
+        output("\n[PaperMC Server Updater]")
+        output("[Handles the checking, downloading, and installation of server versions]")
+        output("[Written by: Owen Cochell]\n")
 
     serv = ServerUpdater(args.path, config_file=args.config_file, config=args.no_load_config or args.server_version, prompt=args.interactive,
                          version=args.iv, build=args.ib, integrity=args.no_integrity)
@@ -1788,7 +1873,7 @@ if __name__ == '__main__':
     
         upgrade_script(serv)
         
-        sys.exit()
+        sys.exit(9)
 
     # Start the server updater
 
@@ -1816,7 +1901,7 @@ if __name__ == '__main__':
 
         # Already printed it, lets exit
 
-        exit()
+        exit(10)
 
     # Check for displaying stats:
 
@@ -1842,3 +1927,9 @@ if __name__ == '__main__':
 
         serv.get_new(default_version=args.version, default_build=args.build, backup=not (args.no_backup or args.new),
                     new=args.new, output_name=name, target_copy=args.copy_old)
+
+        sys.exit(0)
+
+    else:
+
+        sys.exit(10)
