@@ -9,7 +9,7 @@ as well as some minor behind the scene changes.
 Features Added:
 
   - Now supports V3 API
-  - By default, PaperMC now uses a special user agent string: PaperMC-Update/VERSION (https://github.com/OwenCochell/PaperMC-Update)
+  - By default, PaperMC now uses a special user agent string: `PaperMC-Update/VERSION (https://github.com/OwenCochell/PaperMC-Update)`
   - Added option to specify a custom user agent string, which is now REQUIRED by PaperMC (see readme for info)
   - We now use pathlib under the hood
   - Very minor file reading/writing optimizations when preforming download and checksum check
