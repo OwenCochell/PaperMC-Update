@@ -17,7 +17,6 @@ jobs:
                 exe_path: dist
                 options: --onefile, --name "server_update"
             - name: Upload Release
-              uses: AButler/upload-release-assets@v3.0
+              uses: softprops/action-gh-release@v2
               with:
                 files: "dist/server_update.exe"
-                repo-token: ${{ secrets.GITHUB_TOKEN }}
