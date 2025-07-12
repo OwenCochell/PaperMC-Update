@@ -11,30 +11,15 @@ Check out the [PaperMC Documentation](https://paper.readthedocs.io/en/latest/),
 # Prerequisites
 
 You must have Python 3.7+ installed. It should come pre-installed on most linux systems. 
-This script has no other dependencies, so all you need is python! Instructions for installation are below:
+This script has no other dependencies, so all you need is python!
 
-## Linux:
-
-RPM:
->yum install python3.9
-
-Debian:
->apt install python3.9
-
-Or use whatever package manager is installed on your system.
-The only important part is specifying python3.9!
-
-You don't have to install the latest version of python for this script to work, but I highly recommend you do so!
-Again, we require python 3.7 or above.
-
-
-## Windows:
+## Windows
 
 Windows users can download python [here](https://www.python.org/downloads/windows/). The installation is very straightforward, 
 although we recommend you add python to your PATH environment variable, as this makes using python much easier.
 
 More information on installing/configuring python can be found [here](https://www.python.org/downloads/)
-(Any python 3.7+ version works, although I recommend python 3.9).
+(Any python 3.7+ version works, although I recommend the latest version).
 
 We also supply windows binaries that can be ran directly on windows systems without python!
 We use [PyInstaller](https://www.pyinstaller.org/) to build these binaries, and they are built using the one file option, or '-F'.
@@ -49,12 +34,15 @@ The best way to deal with the issue is to whitelist the executable in your antiv
 
 Find them [in the releases](https://github.com/Owen-Cochell/PaperMC-Update/releases)!
 
-
-## MacOS:
+## MacOS
 
 MacOS users can download python [here](https://www.python.org/downloads/mac-osx/).
 
 Again, the installation is very straightforward, but more information can be found [here](https://docs.python.org/3/using/mac.html).
+
+## Linux
+
+Please refer to your distribution's package manager for installing python.
 
 # Note on Python Versions:
 
@@ -181,8 +169,46 @@ Copies the old file to a new location before the installation process:
 Displays stats on the selected version and build:
 >-s, --stats
 
+Specifies a custom user agent string, see below for why you should do this and what value you should choose:
+>-ua [AGENT], --user-agent [AGENT]
+
 Checks GitHub for a new version of this script, and upgrades if necessary:
 >-u, --upgrade
+
+## User Agent
+
+According to the new [API V3 documentation](https://docs.papermc.io/misc/downloads-api),
+it is **REQUIRED** to specify a custom user agent string.
+This string must:
+
+- Clearly identify your software or company
+- Not be generic (defaults from curl, wget, ect.)
+- Includes a contact URL or email address (homepage, bot info page, support email, etc.)
+
+Some examples:
+
+```
+mc-image-helper/1.39.11 (https://github.com/itzg/docker-minecraft-server)
+nodecraft/packifier/1.0.0 (staff@nodecraft.com)
+```
+
+These requirements were pulled directly from the documentation page linked above,
+but they may change at any time. Please check the page regularly to ensure you are in compliance!
+
+You may use the user agent option (`-ua [AGENT], --user-agent [AGENT]`) to specify this value.
+It is optional, but **HIGHLY** recommended to set this value to something custom.
+If a custom user agent is not provided, then this script will use the default value:
+
+```
+PaperMC-Update/VERSION (https://github.com/OwenCochell/PaperMC-Update)
+```
+
+(Where `VERSION` is the current version of this script)
+
+This default value may be blocked at any time at the discretion of the PaperMC team!
+Which means, if you do not specify a custom user agent, then this script may stop working!
+In addition, this value will NOT change going forward (with the exception of the `VERSION` component).
+To avoid any future problems, you should, again, use a custom user agent!
 
 ## Special Keywords
 
@@ -408,8 +434,7 @@ for your build.
 The old command line options were for managing the configuration file, such as removing it, creating it, and
 dumping information to it. These features are now obsolete, but the command line options are included for 
 backwards compatibility. These options do not appear on the help menu and they do nothing. This is to prevent usage errors. It is highly recommended that you stop using these options, and update any scripts or
-implementations that use these features. These features might be removed in a later version if deemed necessary,
-so be warned.
+implementations that use these features. These features might be removed in a later version if deemed necessary, so be warned.
 
 # Updater Class:
 

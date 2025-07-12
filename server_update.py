@@ -15,11 +15,11 @@ if sys.version_info < (3,7,0):
 
 import tempfile
 import urllib.request
-import os
 import shutil
 import json
 import traceback
 import argparse
+import os
 
 from urllib.error import URLError
 from http.client import HTTPResponse
@@ -27,13 +27,14 @@ from hashlib import sha256
 from typing import Any, Callable, List, Sequence, Tuple, Union
 from json.decoder import JSONDecodeError
 from math import ceil
+from pathlib import Path
 
 
 """
 A Set of tools to automate the server update process.
 """
 
-__version__ = '2.2.3'
+__version__ = '3.0.0'
 
 # These variables contain links for the script updating process.
 
@@ -168,7 +169,7 @@ def upgrade_script(serv: ServerUpdater):
     output("# New version available!")
 
     url = GITHUB_RAW
-    path = os.path.realpath(__file__)
+    path = Path(__file__).resolve().absolute()
 
     # Determine if we are working in a frozen environment:
     
@@ -188,7 +189,7 @@ def upgrade_script(serv: ServerUpdater):
     
     serv.fileutil.create_temp_dir()
 
-    temp_path = os.path.realpath(serv.fileutil.temp.name + '/temp')
+    temp_path = Path(serv.fileutil.temp.name).expanduser().resolve() / 'temp'
 
     file = open(temp_path, mode='wb')
 
@@ -324,16 +325,24 @@ class Update:
     so the user can download the files in any way they see fit. 
     """
 
-    def __init__(self):
+    def __init__(self, user_agent: str = ''):
 
-        self._base = 'https://api.papermc.io/v2/projects/paper'  # Base URL to build of off
+        self._base = 'https://fill.papermc.io/v3/projects/paper'  # Base URL to build of off
         self._headers = {
              'Content-Type': 'application/json;charset=UTF-8',
              'Accept': 'application/json, text/plain, */*',
-             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:43.0) Gecko/20100101 Firefox/43.0',
+             'User-Agent': f'PaperMC-Update/{__version__} (https://github.com/OwenCochell/PaperMC-Update)',
              'Accept-Language': 'en-US,en;q=0.5',
              'DNT': '1',
-         }  # Request headers for contacting Paper Download API, emulating a Firefox client
+         }  # Request headers for contacting Paper Download API, we utilize a special user agent for identification
+
+        # Determine if we need to change the user agent in the headers
+
+        if user_agent:
+
+          # We must change the user agent to the provided value
+
+          self._headers['User-Agent'] = user_agent
 
         self.download_path = ''  # Path the file was downloaded to
 
@@ -421,13 +430,15 @@ class Update:
 
         return final
 
-    def build_download_url(self, version: str, build_num:int):
+    def build_download_url(self, version: str, build_num:int) -> dict[str, dict[str, Union[str, int, dict[str, str]]]]:
         """
         Builds a valid download URL that can be used to download a file.
         We use the version and build number to generate this URL.
 
         The user can use this URL to download the file
         using any method of their choice.
+        In addition to the download URL,
+        we also provide the filesize, SHA256 checksum, and default filename.
 
         :param version: Version to download
         :type version: str
@@ -435,31 +446,31 @@ class Update:
         :type build_num: str, optional
         """
 
-        # Get download name
+        ##
+        # New in V3
+        ##
 
-        download_name = self.get(version, build_num)['downloads']['application']['name']
+        # The API now directly gives us a download URL,
+        # Along with the size, checksum, and default filesname.
+        # We now return the download URL, along with these newly provided values.
 
-        # Build and return the URL:
+        # Make the call, extract the relevant data, and return
 
-        return self._base + '/versions/' + str(version) + '/builds/' + str(build_num) + '/downloads/' + str(download_name)
+        return self.get(version, build_num)['downloads']['server:default']
 
-    def download_response(self, version: str, build_num:int) -> HTTPResponse:
+    def download_response(self, url: str) -> HTTPResponse:
         """
         Calls the underlying urllib library and return the object generated.
 
         This object is usually a HTTPResponse object.
         The user can use this object in any way they see fit.
-        We automatically generate the URL using the version and build_num given.
-
+        Users MUST provide a URL to a file to download!
+        
         :param url: URL of file to download
         :type url: str
         :return: Object returned by urllib
         :rtype: HTTPResponse
         """
-
-        # Build the URL
-
-        url = self.build_download_url(version, build_num)
 
         # Creating request here:
 
@@ -469,7 +480,7 @@ class Update:
 
         return urllib.request.urlopen(req)
 
-    def download_file(self, path: str, version: str, build_num:int, check:bool=True, call: Callable=None, args: List=None, blocksize: int=4608) -> str:
+    def download_file(self, path: Path, version: str, build_num:int, check:bool=True, call: Callable=None, args: List=None, blocksize: int=4608) -> Path:
         """
         Downloads the content to the given external file.
         We handle all file operations,
@@ -512,39 +523,32 @@ class Update:
             call = self._none_function
             args = []
 
+        # First, get the file data
+
+        ddata = self.build_download_url(version, build_num)
+
         # Get the data:
 
-        data = self.download_response(version, build_num)
+        data = self.download_response(str(ddata['url']))
 
         # Get filename for download:
 
-        if os.path.isdir(path):
+        if path.is_dir():
 
             # Use the default name:
 
-            path = os.path.join(path, data.getheader('content-disposition', default='').split("''")[1])
+            path = path / str(ddata['name'])
 
         # Get length of file:
 
-        length = data.getheader('content-length')
-
-        # Ensure result is not None:
-
-        if length is None:
-
-            # Raise an error:
-
-            raise ValueError("Content length not present in HTTP headers!")
-
-        # Otherwise, set the length:
-
-        length = int(length)
+        length: int = int(ddata['size'])
 
         total = ceil(length/blocksize) + 1
 
-        # Open the file:
+        # Open the file, we want to read it as well for verification,
+        # so we specify the + symbol to open for reading and writing
 
-        file = open(path, mode='ba')
+        file = open(path, mode='bw+')
 
         # Copy the downloaded data to the file:
 
@@ -558,21 +562,21 @@ class Update:
 
             file.write(data.read(blocksize))
 
-        # Close the file:
+        # Ensure the right checksum is available
+        # (According to the schema, they only provide sha256 sums, but better be safe than sorry)
 
-        file.close()
-
-        # Re-open the file for reading:
-
-        file = open(path, mode='rb')
-
-        if check:
+        if check and 'sha256' in ddata['checksums'].keys():
 
             # Get the ideal SHA256 hash for the file:
 
-            hash = self.get(version, build_num)['downloads']['application']['sha256']
+            hash = ddata['checksums']['sha256']
 
-            # Checking integrity:
+            # We gotta seek to the beginning of the file,
+            # since our pointer is now at the end
+
+            file.seek(0)
+
+            # Now checking integrity, again we only expect to work with SHA256
 
             if not sha256(file.read()).hexdigest() == hash:
 
@@ -586,7 +590,7 @@ class Update:
 
         return path
 
-    def get_versions(self) -> Tuple[str,...]:
+    def get_versions(self) -> list[str]:
         """
         Gets available versions of the server.
 
@@ -596,9 +600,45 @@ class Update:
         :return: List of available versions
         """
 
-        # Returning version info
+        # Get the version map
 
-        return self.get()['versions']
+        vmap: dict[str, list[str]] = self.get()['versions']
+
+        ##
+        # New in V3
+        ##
+
+        # The API now provides us with a dictionary mapping major versions with sub-versions.
+        # Previously, it was like this: ['1.14.4', '1.14.3', '1.14.2', '1.14.1', '1.14', '1.13.2', ...]
+        # Now, it is like this: {'1.14': ['1.14.4', '1.14.3', '1.14.2', '1.14.1', '1.14'], '1.13': [...], ...}
+        # In addition, the order of releases are reversed, it used to be oldest -> newest, but now it's newest -> oldest
+        # So, for compatibility reasons, we need to squish this mapping of arrays in a single array, and then reverse sort it
+
+        # Define final array to contain results
+
+        versions: list[str] = []
+
+        # Iterate over each key and value in the mapping
+
+        for _, value in vmap.items():
+
+            # Iterate over each version in the values
+
+            for val in value:
+
+                # Add the value to the master list
+
+                versions.append(val)
+
+        # Versions in dictionary are in order
+        # (Dictionary keys are in the order they are added since python 3.7, the minimum python version),
+        # but we need to reverse
+
+        versions.reverse()
+
+        # Finally, return the version info
+
+        return versions
 
     def get_buildnums(self, version: str) -> Tuple[int,...]:
         """
@@ -716,7 +756,7 @@ class FileUtil:
 
     def __init__(self, path):
 
-        self.path: str = os.path.abspath(path)  # Path to working directory
+        self.path: Path = Path(path).expanduser().resolve().absolute()  # Path to working directory
         self.temp: tempfile.TemporaryDirectory  # Tempdir instance
         self.config_default = 'version_history.json'  # Default name of paper versioning file
         self.target_path = ''  # Path the new file will be moved to
@@ -754,17 +794,17 @@ class FileUtil:
 
             # Need to determine our config path:
 
-            if os.path.isdir(self.path):
+            if self.path.is_dir():
 
-                config = os.path.join(self.path, self.config_default)
+                config = self.path / self.config_default
 
             else:
 
-                config = os.path.join(os.path.dirname(self.path), self.config_default)
+                config = self.path.parent / self.config_default
 
         output("# Loading configuration data from file [{}] ...".format(config))
 
-        if not os.path.isfile(config):
+        if not Path(config).is_file():
 
             print("# Unable to load config data from file at [{}] - Not found/Not a file!".format(config))
 
@@ -844,7 +884,7 @@ class FileUtil:
 
         # Checking if we should copy the old file:
 
-        if target_copy is not None and os.path.isfile(self.path):
+        if target_copy is not None and self.path.is_file():
 
             # Copy the old file:
 
@@ -871,13 +911,13 @@ class FileUtil:
 
         # Creating backup of old file:
 
-        if backup and os.path.isfile(self.path) and not new:
+        if backup and self.path.is_file() and not new:
 
             output("# Creating backup of previous installation ...")
 
             try:
 
-                shutil.copyfile(self.path, os.path.join(self.temp.name, 'backup'))
+                shutil.copyfile(self.path, Path(self.temp.name) / 'backup')
 
             except Exception as e:
 
@@ -893,11 +933,11 @@ class FileUtil:
 
             self.target_path = new_path
 
-            output("# Backup created at: {}".format(os.path.join(self.temp.name, 'backup')))
+            output("# Backup created at: {}".format(Path(self.temp.name) / 'backup'))
 
         # Determine if we should delete the original file:
 
-        if os.path.isfile(self.path) and not new:
+        if self.path.is_file() and not new:
 
             # Removing current file:
 
@@ -932,11 +972,11 @@ class FileUtil:
         try:
 
             output("# Copying download data to root directory ...")
-            output("# ({} > {})".format(file_path, os.path.join(os.path.dirname(self.path), new_path)))
+            output("# ({} > {})".format(file_path, self.path.parent / new_path))
 
             # Copy to the new directory with the given name:
 
-            shutil.copyfile(file_path, os.path.join(os.path.dirname(self.path), new_path))
+            shutil.copyfile(file_path, self.path.parent / new_path)
 
         except Exception as e:
 
@@ -950,7 +990,7 @@ class FileUtil:
 
             # Recover backup
 
-            if backup and os.path.isfile(self.path) and not new:
+            if backup and self.path.is_file() and not new:
 
                 self._recover_backup()
 
@@ -1004,12 +1044,12 @@ class FileUtil:
 
         # Copying file to root directory:
 
-        print("# Copying backup file[{}] to server root directory[{}]...".format(os.path.join(self.temp.name, 'backup'),
-                                                                                 self.path))
+        print("# Copying backup file[{}] to server root directory[{}]...".format(Path(self.temp.name) / 'backup'),
+                                                                                 self.path)
 
         try:
 
-            shutil.copyfile(os.path.join(self.temp.name, 'backup'), self.path)
+            shutil.copyfile(Path(self.temp.name) / 'backup', self.path)
 
         except Exception as e:
 
@@ -1030,7 +1070,6 @@ class FileUtil:
         return True
 
     def _fail_install(self, point):
-
         """
         Shows where the error occurred during the installation.
 
@@ -1048,12 +1087,11 @@ class FileUtil:
 
 
 class ServerUpdater:
-
     """
     Class that binds all server updater classes together
     """
 
-    def __init__(self, path, config_file: str='', version='0', build=-1, config=True, prompt=True, integrity=True):
+    def __init__(self, path, config_file: str='', version='0', build=-1, config=True, prompt=True, integrity=True, user_agent: str = ''):
 
         self.version = version  # Version of minecraft server we are running
         self.buildnum = build  # Buildnum of the current server
@@ -1065,7 +1103,7 @@ class ServerUpdater:
         self.build_install = None  # Build to install
         self.config = config
 
-        self.update = Update()  # Updater Instance
+        self.update = Update(user_agent=user_agent)  # Updater Instance
 
     def start(self):
         """
@@ -1133,18 +1171,18 @@ class ServerUpdater:
         output("\n+==================================================+")
 
         output("\n[ --== Paper Stats: ==-- ]\n")
-        output("Version: {}".format(data['version']))
-        output("Build Number: {}".format(data['build']))
-        output("Creation Time: {}".format(data['time']))
-        output("File name: {}".format(data['downloads']['application']['name']))
-        output("SHA256 Hash: {}".format(data['downloads']['application']['sha256']))
+        output(f"Version: {ver}")
+        output(f"Build Number: {build}")
+        output(f"Creation Time: {data['time']}")
+        output(f"File name: {data['downloads']['server:default']['name']}")
+        output(f"SHA256 Hash: {data['downloads']['server:default']['checksums']['sha256']}")
 
-        for num, change in enumerate(data['changes']):
+        for num, change in enumerate(data['commits']):
 
             output("\nChange {}:\n".format(num))
 
-            output("Commit ID: {}".format(change['commit']))
-            output("Commit Summary: {}".format(change['summary']))
+            output("Commit ID: {}".format(change['sha']))
+            output("Commit Time: {}".format(change['time']))
             output("Commit Message: {}".format(change['message']))
 
         output("\n[ --== End Paper Stats! ==-- ]\n")
@@ -1520,7 +1558,7 @@ class ServerUpdater:
 
         try:
 
-            path = self.update.download_file(self.fileutil.temp.name, ver, build_num=build, call=progress_bar, check=self.integrity)
+            path = self.update.download_file(Path(self.fileutil.temp.name), ver, build_num=build, call=progress_bar, check=self.integrity)
 
         except URLError as e:
 
@@ -1542,7 +1580,7 @@ class ServerUpdater:
             print("\nThere are many different causes for this error to occur.")
             print("It is likely that this is a one-off event.")
             print("Try again, and if this command continues to fail,")
-            print("then your network or device might have a problem.")
+            print("then your network or storage device might have a problem.")
 
             error_report(e)
 
@@ -1572,27 +1610,27 @@ class ServerUpdater:
 
         # No output name defined via argument or path:
 
-        if output_name is None and os.path.isdir(self.fileutil.path):
+        if output_name is None and self.fileutil.path.is_dir():
 
             # Keep original name:
 
-            target = os.path.join(self.fileutil.path, os.path.split(path)[-1])
+            target = self.fileutil.path / path.name
 
         # Output name specified via argument but not path:
 
-        elif output_name is not None and os.path.isdir(self.fileutil.path):
+        elif output_name is not None and self.fileutil.path.is_dir():
 
             # Save file with custom name:
 
-            target = os.path.join(self.fileutil.path, output_name)
+            target = self.fileutil.path / output_name
 
         # Output name specified via argument and path:
 
-        elif output_name is not None and os.path.isfile(self.fileutil.path):
+        elif output_name is not None and self.fileutil.path.is_file():
 
             # Save file with custom name other than filename in path:
 
-            target = os.path.join(os.path.dirname(self.fileutil.path), output_name)
+            target = self.fileutil.path.parent / output_name
 
         # Installing file:
 
@@ -1713,7 +1751,7 @@ if __name__ == '__main__':
                                      epilog="Please check the github page for more info: "
                                             "https://github.com/Owen-Cochell/PaperMC-Update.")
 
-    parser.add_argument('path', help='Path to paper jar file', default=os.path.dirname(__file__) + '/', nargs='?')
+    parser.add_argument('path', help='Path to paper jar file', default=Path(__file__).expanduser().resolve().absolute().parent, type=Path, nargs='?')
 
     version = parser.add_argument_group('Version Options', 'Arguments for selecting and altering server version information')
 
@@ -1752,6 +1790,8 @@ if __name__ == '__main__':
                         action='store_true')
     parser.add_argument('-s', '--stats', help='Displays statistics on the selected version and build', action='store_true')
     parser.add_argument('-V', '--script-version', help='Displays script version', version=__version__, action='version')
+    parser.add_argument("-ua", "--user-agent",
+                        help="User agent to utilize when making requests this should be unique and custom to you! See https://docs.papermc.io/misc/downloads-api/", type=str, default='')
     parser.add_argument('-u', '--upgrade', help='Upgrades this script to a new version if necessary, and exits', action='store_true')
 
     # Deprecated arguments - Included for compatibility, but do nothing
@@ -1776,7 +1816,7 @@ if __name__ == '__main__':
     output("[Written by: Owen Cochell]\n")
 
     serv = ServerUpdater(args.path, config_file=args.config_file, config=args.no_load_config or args.server_version, prompt=args.interactive,
-                         version=args.iv, build=args.ib, integrity=args.no_integrity)
+                         version=args.iv, build=args.ib, integrity=args.no_integrity, user_agent=args.user_agent)
 
     update_available = True
 
@@ -1804,11 +1844,11 @@ if __name__ == '__main__':
 
         name = args.output
 
-    elif os.path.basename(args.path) != '':
+    elif args.path.is_file():
 
         # Get filename from the given path:
 
-        name = os.path.basename(args.path)
+        name = args.path.name
 
     # Check if we are just looking for server info:
 

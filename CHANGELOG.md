@@ -1,5 +1,28 @@
 # Changelog 
 
+## 3.0.0
+
+Huge changes!
+We now utilize the [V3 PaperMC API](https://docs.papermc.io/misc/downloads-api),
+as well as some minor behind the scene changes.
+
+Features Added:
+
+  - Now supports V3 API
+  - By default, PaperMC now uses a special user agent string: PaperMC-Update/VERSION (https://github.com/OwenCochell/PaperMC-Update)
+  - Added option to specify a custom user agent string, which is now REQUIRED by PaperMC (see readme for info)
+  - We now use pathlib under the hood
+  - Very minor file reading/writing optimizations when preforming download and checksum check
+
+Bug Fixes:
+
+  - A bunch of misc. errors related to old V2 API usage
+
+Other Fixes:
+
+  - Added documentation on custom user agent string argument
+  - Added section describing why you should define a custom agent string
+
 ## 2.2.3
 
 Bug Fixes:
