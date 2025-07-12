@@ -16,6 +16,8 @@ jobs:
               with:
                 path: .
             - name: Upload Release
-              uses: softprops/action-gh-release@v2
+              uses: AButler/upload-release-assets@v3.0
               with:
-                files: "dist/server_update.exe"
+                files: dist/windows/server-update.exe
+                repo-token: ${{ secrets.GITHUB_TOKEN }}
+  
