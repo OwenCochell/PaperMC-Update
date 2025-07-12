@@ -1,5 +1,11 @@
 # Changelog 
 
+## 3.0.1
+
+Bug Fixes:
+
+  - Resolved error where oldest build is selected when choosing the latest
+
 ## 3.0.0
 
 Huge changes!

@@ -18,6 +18,6 @@ jobs:
             - name: Upload Release
               uses: AButler/upload-release-assets@v3.0
               with:
-                files: dist/windows/server-update.exe
+                files: ./dist/windows/server-update.exe
                 repo-token: ${{ secrets.GITHUB_TOKEN }}
   

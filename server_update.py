@@ -34,7 +34,7 @@ from pathlib import Path
 A Set of tools to automate the server update process.
 """
 
-__version__ = '3.0.0'
+__version__ = '3.0.1'
 
 # These variables contain links for the script updating process.
 
@@ -640,7 +640,7 @@ class Update:
 
         return versions
 
-    def get_buildnums(self, version: str) -> Tuple[int,...]:
+    def get_buildnums(self, version: str) -> list[int]:
         """
         Gets available build for a particular version.
 
@@ -653,9 +653,25 @@ class Update:
         :rtype: Tuple[int,...]
         """
 
-        # Returning build info:
+        ##
+        # New in V3
+        ##
 
-        return self.get(version)['builds']
+        # The build numbers are now reversed, going from newest to oldest.
+        # This script expects the build numbers to be from oldest to newest,
+        # So we will reverse this list
+
+        # Get the list from the API
+
+        builds: list[int] = self.get(version)['builds']
+
+        # Reverse the list
+
+        builds.reverse()
+
+        # Return the build info
+
+        return builds
 
     def get(self, version: str=None, build_num: int=None) -> dict:
         """
