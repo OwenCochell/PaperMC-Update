@@ -1,3 +1,6 @@
+
+Creepers Default Start String:   Python C:\Minecraft\server_update.py -user-agent github.com/creeper36 --batch --no-backup C:\Minecraft\paper.jar
+
 # PaperMC-Update
 
 A simple CLI script that can check, download, and install PaperMC jar files.
@@ -11,30 +14,15 @@ Check out the [PaperMC Documentation](https://paper.readthedocs.io/en/latest/),
 # Prerequisites
 
 You must have Python 3.7+ installed. It should come pre-installed on most linux systems. 
-This script has no other dependencies, so all you need is python! Instructions for installation are below:
+This script has no other dependencies, so all you need is python!
 
-## Linux:
-
-RPM:
->yum install python3.9
-
-Debian:
->apt install python3.9
-
-Or use whatever package manager is installed on your system.
-The only important part is specifying python3.9!
-
-You don't have to install the latest version of python for this script to work, but I highly recommend you do so!
-Again, we require python 3.7 or above.
-
-
-## Windows:
+## Windows
 
 Windows users can download python [here](https://www.python.org/downloads/windows/). The installation is very straightforward, 
 although we recommend you add python to your PATH environment variable, as this makes using python much easier.
 
 More information on installing/configuring python can be found [here](https://www.python.org/downloads/)
-(Any python 3.7+ version works, although I recommend python 3.9).
+(Any python 3.7+ version works, although I recommend the latest version).
 
 We also supply windows binaries that can be ran directly on windows systems without python!
 We use [PyInstaller](https://www.pyinstaller.org/) to build these binaries, and they are built using the one file option, or '-F'.
@@ -49,12 +37,15 @@ The best way to deal with the issue is to whitelist the executable in your antiv
 
 Find them [in the releases](https://github.com/Owen-Cochell/PaperMC-Update/releases)!
 
-
-## MacOS:
+## MacOS
 
 MacOS users can download python [here](https://www.python.org/downloads/mac-osx/).
 
 Again, the installation is very straightforward, but more information can be found [here](https://docs.python.org/3/using/mac.html).
+
+## Linux
+
+Please refer to your distribution's package manager for installing python.
 
 # Note on Python Versions:
 
@@ -181,16 +172,54 @@ Copies the old file to a new location before the installation process:
 Displays stats on the selected version and build:
 >-s, --stats
 
-Checks GitHub for a new version of this script, and upgrades if necessary:
->-u, --upgrade
+Specifies a custom user agent string, see below for why you should do this and what value you should choose:
+>-ua [AGENT], --user-agent [AGENT]
 
 Log-friendly filtering of output mainly used for batch files.
 >-ba, --batch
 
-NOTE: You can optionally choose to redirect output (>>) to your logs with minimal output.   
-See: [BEFORE AND AFTER EXAMPLE](https://i.ibb.co/58tbsYr/batch.jpg)   
+Checks GitHub for a new version of this script, and upgrades if necessary:
+>-u, --upgrade
 
-        PYTHON C:\Minecraft\Scripts\server_update.py --batch C:\Minecraft\paper.jar >> C:\Minecraft\logs\latest.log
+## User Agent
+
+According to the new [API V3 documentation](https://docs.papermc.io/misc/downloads-api),
+it is **REQUIRED** to specify a custom user agent string.
+This string must:
+
+- Clearly identify your software or company
+- Not be generic (defaults from curl, wget, ect.)
+- Includes a contact URL or email address (homepage, bot info page, support email, etc.)
+
+Some examples:
+
+```
+--user-agent johnsmith@email.com
+--user-agent github.com/johnsmith
+-ua windows11johnsmith
+```
+
+If you add a space in your string it will fail.. It will think its the next argument.
+If you fail to provide a -UA argument it will not fail because the dev (Owen Cochell) is using his default as a work-around.
+YOU NEED TO CHANGE IT TO COMPLY WITH THESE NEW API RULES.
+
+These requirements were pulled directly from the documentation page linked above,
+but they may change at any time. Please check the page regularly to ensure you are in compliance!
+
+You may use the user agent option (`-ua [AGENT], --user-agent [AGENT]`) to specify this value.
+It is optional, but **HIGHLY** recommended to set this value to something custom.
+If a custom user agent is not provided, then this script will use the default value:
+
+```
+PaperMC-Update/VERSION (https://github.com/OwenCochell/PaperMC-Update)
+```
+
+(Where `VERSION` is the current version of this script)
+
+This default value may be blocked at any time at the discretion of the PaperMC team!
+Which means, if you do not specify a custom user agent, then this script may stop working!
+In addition, this value will NOT change going forward (with the exception of the `VERSION` component).
+To avoid any future problems, you should, again, use a custom user agent!
 
 ## Special Keywords
 
@@ -326,24 +355,19 @@ This will automatically disable old file deletion and backup.
 The newly downloaded file will simply be moved to the target directory,
 and will not be renamed(unless otherwise instructed by the '-o' parameter).
 
+
 ## Errorlevels:  
 After paper.jar has an update it will Exit in a Normal state with Errorlevel 8.
 This can be used by batch files to trigger 'GOTO UPDATE-FOUND' in the batch script.   
 
 Current Errorlevels Supported :   
-0 - Normal Exit- New MC Version Found   
-2 - No Internet Connection Found   
-3 - Critical Error- Python Version Too Low   
-9 - Normal Exit- Server_Update.py was Updated   
-10 - Normal Exit- No MC Update   
+0 - Normal Exit- No MC Update   
+8 - Normal Exit- New Paper Was Found and Updated
 
         PYTHON server_update.py C:\Minecraft\paper.jar
-        IF %ERRORLEVEL% EQU 10 GOTO SAMEPAPER
-        IF %ERRORLEVEL% EQU 9 GOTO SERVERUPDATE
-        IF %ERRORLEVEL% EQU 3 GOTO ERRORPYTHON
-        IF %ERRORLEVEL% EQU 2 GOTO ERRORINTERNET
-        IF %ERRORLEVEL% EQU 0 GOTO NEWPAPERFOUND
+        IF %ERRORLEVEL% EQU 8 GOTO NEWPAPERFOUND
         GOTO SAMEPAPER
+
 
 # Examples:
 
@@ -435,8 +459,7 @@ for your build.
 The old command line options were for managing the configuration file, such as removing it, creating it, and
 dumping information to it. These features are now obsolete, but the command line options are included for 
 backwards compatibility. These options do not appear on the help menu and they do nothing. This is to prevent usage errors. It is highly recommended that you stop using these options, and update any scripts or
-implementations that use these features. These features might be removed in a later version if deemed necessary,
-so be warned.
+implementations that use these features. These features might be removed in a later version if deemed necessary, so be warned.
 
 # Updater Class:
 
