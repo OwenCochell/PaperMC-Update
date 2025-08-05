@@ -1,5 +1,6 @@
 
-Creepers Default Start String:   Python C:\Minecraft\server_update.py -user-agent github.com/creeper36 --batch --no-backup C:\Minecraft\paper.jar
+Creepers Default Start String:
+Python C:\Minecraft\server_update.py --user-agent "PaperUpdater/3.0.1 (github.com/creeper36)" --batch --no-backup C:\Minecraft\paper.jar
 
 # PaperMC-Update
 
@@ -194,12 +195,11 @@ This string must:
 Some examples:
 
 ```
---user-agent johnsmith@email.com
---user-agent github.com/johnsmith
--ua windows11johnsmith
+--user-agent "PaperUpdater/3.0.1 (johnsmith@email.com)"
+-ua paperupdater-github.com/johnsmith
 ```
 
-If you add a space in your string it will fail.. It will think its the next argument.
+If you add a space in your string it will fail unless you add quotes.. The fail will think its the next argument.
 If you fail to provide a -UA argument it will not fail because the dev (Owen Cochell) is using his default as a work-around.
 YOU NEED TO CHANGE IT TO COMPLY WITH THESE NEW API RULES.
 
