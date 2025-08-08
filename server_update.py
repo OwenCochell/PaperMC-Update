@@ -1912,9 +1912,9 @@ if __name__ == '__main__':
         serv.get_new(default_version=args.version, default_build=args.build, backup=not (args.no_backup or args.new),
                     new=args.new, output_name=name, target_copy=args.copy_old)
 
-        sys.exit(8)
+        sys.exit(0)
 
     else:
 
-        sys.exit(0)
+        sys.exit(1)
 
