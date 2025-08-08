@@ -1,8 +1,53 @@
 
-This Repository is more Windows DOS Batch Script friendly.
-
 ## Creepers Actual Start String:
 Python C:\Minecraft\server_update.py --user-agent "PaperUpdater/3.0.1 (github.com/creeper36)" --batch --no-backup C:\Minecraft\paper.jar
+
+# New Command Line Variables:
+Specifies a custom user agent string, see below for why you should do this and what value you should choose:
+>-ua [AGENT], --user-agent [AGENT]
+
+Log-friendly filtering of output mainly used for batch files.
+>-ba, --batch
+
+## User Agent
+
+According to the new [API V3 documentation](https://docs.papermc.io/misc/downloads-api),
+It is **REQUIRED** to specify a custom user agent string.
+This string must:
+
+- Clearly identify your software and version
+- Include a method of contact.
+- Not be generic
+
+Some examples:
+
+```
+--user-agent "PaperUpdater/3.0.1 (johnsmith@email.com)"
+-ua paperupdater-github.com/johnsmith
+```
+
+IF YOU ADD A SPACE YOU NEED TO ADD QUOTES.. IT WILL FAIL THINKING ITS THE NEXT ARGUMENT.
+
+If you fail to provide a -UA argument it will not fail but YOU NEED TO CHANGE IT TO COMPLY WITH THESE NEW API RULES.
+
+You may use the user agent option (`-ua [AGENT], --user-agent [AGENT]`) to specify this value.
+It is optional, but **HIGHLY** recommended to set this value to something custom.
+If a custom user agent is not provided, then this script will use the default value.
+
+
+## Errorlevels:  
+After paper.jar has an update it will Exit in a Normal state with Errorlevel 8.
+This can be used by batch files to trigger 'GOTO UPDATE-FOUND' in the batch script.   
+
+Current Errorlevels Supported :   
+1 - Normal Exit- No MC Update   
+0 - Normal Exit- New Paper Was Found and Updated
+
+        PYTHON server_update.py C:\Minecraft\paper.jar
+        IF %ERRORLEVEL% EQU 1 GOTO SAMEPAPER
+        IF %ERRORLEVEL% EQU 0 GOTO NEWPAPERFOUND
+        GOTO SAMEPAPER
+
 
 # PaperMC-Update
 
@@ -184,44 +229,6 @@ Log-friendly filtering of output mainly used for batch files.
 Checks GitHub for a new version of this script, and upgrades if necessary:
 >-u, --upgrade
 
-## User Agent
-
-According to the new [API V3 documentation](https://docs.papermc.io/misc/downloads-api),
-it is **REQUIRED** to specify a custom user agent string.
-This string must:
-
-- Clearly identify your software or company
-- Not be generic (defaults from curl, wget, ect.)
-- Includes a contact URL or email address (homepage, bot info page, support email, etc.)
-
-Some examples:
-
-```
---user-agent "PaperUpdater/3.0.1 (johnsmith@email.com)"
--ua paperupdater-github.com/johnsmith
-```
-
-If you add a space in your string it will fail unless you add quotes.. The fail will think its the next argument.
-If you fail to provide a -UA argument it will not fail because the dev (Owen Cochell) is using his default as a work-around.
-YOU NEED TO CHANGE IT TO COMPLY WITH THESE NEW API RULES.
-
-These requirements were pulled directly from the documentation page linked above,
-but they may change at any time. Please check the page regularly to ensure you are in compliance!
-
-You may use the user agent option (`-ua [AGENT], --user-agent [AGENT]`) to specify this value.
-It is optional, but **HIGHLY** recommended to set this value to something custom.
-If a custom user agent is not provided, then this script will use the default value:
-
-```
-PaperMC-Update/VERSION (https://github.com/OwenCochell/PaperMC-Update)
-```
-
-(Where `VERSION` is the current version of this script)
-
-This default value may be blocked at any time at the discretion of the PaperMC team!
-Which means, if you do not specify a custom user agent, then this script may stop working!
-In addition, this value will NOT change going forward (with the exception of the `VERSION` component).
-To avoid any future problems, you should, again, use a custom user agent!
 
 ## Special Keywords
 
@@ -356,19 +363,6 @@ You can specify a directory to target instead of a file like this:
 This will automatically disable old file deletion and backup.
 The newly downloaded file will simply be moved to the target directory,
 and will not be renamed(unless otherwise instructed by the '-o' parameter).
-
-
-## Errorlevels:  
-After paper.jar has an update it will Exit in a Normal state with Errorlevel 8.
-This can be used by batch files to trigger 'GOTO UPDATE-FOUND' in the batch script.   
-
-Current Errorlevels Supported :   
-0 - Normal Exit- No MC Update   
-8 - Normal Exit- New Paper Was Found and Updated
-
-        PYTHON server_update.py C:\Minecraft\paper.jar
-        IF %ERRORLEVEL% EQU 8 GOTO NEWPAPERFOUND
-        GOTO SAMEPAPER
 
 
 # Examples:
