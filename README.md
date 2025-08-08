@@ -36,12 +36,12 @@ If a custom user agent is not provided, then this script will use the default va
 
 
 ## Errorlevels:  
-After paper.jar has an update it will Exit in a Normal state with Errorlevel 8.
+After paper.jar has an update it will Exit in a Normal state with Errorlevel 0.
 This can be used by batch files to trigger 'GOTO UPDATE-FOUND' in the batch script.   
 
 Current Errorlevels Supported :   
-1 - Normal Exit- No MC Update   
-0 - Normal Exit- New Paper Was Found and Updated
+1 - Normal Exit- No PaperMC Update   
+0 - Normal Exit- New PaperMC Was Found and Updated
 
         PYTHON server_update.py C:\Minecraft\paper.jar
         IF %ERRORLEVEL% EQU 1 GOTO SAMEPAPER
