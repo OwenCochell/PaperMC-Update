@@ -15,11 +15,11 @@ if sys.version_info < (3,7,0):
 
 import tempfile
 import urllib.request
-import os
 import shutil
 import json
 import traceback
 import argparse
+import os
 
 from urllib.error import URLError
 from http.client import HTTPResponse
@@ -1097,7 +1097,7 @@ class FileUtil:
 
         return True
 
-    def _fail_install(self, point):        
+    def _fail_install(self, point):
         """
         Shows where the error occurred during the installation.
 
@@ -1687,73 +1687,94 @@ class ServerUpdater:
 
         return
 
-    def _select(self, val: Any, choice: Sequence[Any], default: str, name: str, print_output: bool=True) -> Union[str, None]:
-        """
-        Selects a value from the choices.
-        We support updater keywords,
-        like 'latest', 'current' and ''.
+        return val
 
-        :param val: Value entered
-        :type val: Any
-        :param choice: Choices to choose from
-        :type choice: Sequence[Any]
-        :param default: Default value
-        :type default: str
-        :param name: Name of value we are choosing
-        :type name: str
-        :param print_output: Boolean determining if we output choices
-        :type print_output: bool
-        :return: Selected value, None if invalid
-        :rtype: str, None
+
+    def _select(self, val, choice, default, name, print_output=True):
+        """
+        Select a value from choices.
+        Special values:
+          - '', uses default
+          - -1 or 'latest', picks newest automatically
+          - 'current', uses currently installed version/build
+        Robust to string/int mismatches and list ordering.
         """
 
+        # Normalize blank -> default
         if val == '':
-
-            # User wants default value:
-
             val = default
 
-        if val == 'latest' or val == -1:
+        # Normalize numeric sentinel for latest
+        if val == -1:
+            val = 'latest'
 
-            # User wants latest
+        # Normalize strings
+        if isinstance(val, str):
+            s = val.strip().lower()
+            if s == 'latest':
+                val = 'latest'
+            elif s == 'current':
+                val = 'current'
+            else:
+                # If choices are ints and user typed digits, coerce
+                if choice and isinstance(choice[0], int) and s.isdigit():
+                    val = int(s)
 
+        # Handle “latest”
+        if val == 'latest':
+            if not choice:
+                if print_output:
+                    output(f"\n# Error: No {name}s available!")
+                return None
+
+            # If this is build selection, take the numeric max (most robust).
+            if name in ('build', 'buildnum'):
+                # Coerce to ints if needed
+                if isinstance(choice[0], str):
+                    try:
+                        nums = [int(x) for x in choice]
+                    except ValueError:
+                        # Fallback: keep original and rely on last element
+                        latest = choice[-1]
+                    else:
+                        latest = max(nums)
+                else:
+                    latest = max(choice)
+
+                if print_output:
+                    output(f"# Selecting latest {name} - [{latest}] ...")
+                return latest
+
+            # For versions, keep your existing “newest” behavior (last element).
+            latest = choice[-1]
             if print_output:
+                output(f"# Selecting latest {name} - [{latest}] ...")
+            return latest
 
-                output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
-
-            val = choice[-1]
-
-            return val
-
+        # Handle “current”
         if val == 'current':
-            
             if name == 'version':
-            
-                # User wants currently installed version:
-                
                 val = self.version
-                
-            elif name == 'build':
-                
+            elif name in ('build', 'buildnum'):
                 val = self.buildnum
 
+        # Coerce for membership checks
+        if choice:
+            if isinstance(choice[0], int) and isinstance(val, str) and val.isdigit():
+                val = int(val)
+            elif isinstance(choice[0], str) and not isinstance(val, str):
+                val = str(val)
+
+        # Validate
         if val not in choice:
-
-            # User selected invalid option
-
             if print_output:
-
-                output("\n# Error: Invalid {} selected!".format(name))
-
+                output(f"\n# Error: Invalid {name} selected!")
             return None
 
-        # Option selected is valid. Continue
-
         if print_output:
-
-            output("# Selecting {}: [{}] ...".format(name, val))
-
+            output(f"# Selecting {name}: [{val}] ...")
         return val
+
 
     def _url_report(self, point: str):
         """
@@ -1787,7 +1808,7 @@ if __name__ == '__main__':
     # Server version arguments:
 
     version.add_argument('-v', '--version', help='Server version to install(Sets default value)', default='latest', type=str)
-    version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default=-1, type=str)
+    version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default=-1, type=int)
     version.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0', type=str)
     version.add_argument('-ib', help='Sets the currently installed server build, ignores config', default=0, type=int)
     version.add_argument('-sv', '--server-version', help="Displays server version from configuration file and exits", action='store_true')
