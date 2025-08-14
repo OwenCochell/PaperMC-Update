@@ -27,4 +27,3 @@ __pycache__/
 # Pyinstaller Files
 build/
 dist/
-*.spec

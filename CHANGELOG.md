@@ -29,10 +29,6 @@ Other Fixes:
   - Added documentation on custom user agent string argument
   - Added section describing why you should define a custom agent string
 
-## 2.2.3 by CREEPER36
-
-  --batch was added to allow output filtering.. a cleaner output for batch script users.
-
 ## 2.2.3
 
 Bug Fixes:

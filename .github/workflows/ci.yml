@@ -7,17 +7,17 @@ on:
 
 jobs:
     pyinstaller-build:
-        runs-on: windows-latest
+        runs-on: ubuntu-latest
         steps:
+            - uses: actions/checkout@v4
             - name: PyInstaller Action
               id: pyinstall
-              uses: Martin005/pyinstaller-action@v1.2.0
+              uses: JackMcKew/pyinstaller-action-windows@main
               with:
-                spec: server_update.py
-                exe_path: dist
-                options: --onefile, --name "server_update"
+                path: .
             - name: Upload Release
               uses: AButler/upload-release-assets@v3.0
               with:
-                files: "dist/server_update.exe"
+                files: ./dist/windows/server-update.exe
                 repo-token: ${{ secrets.GITHUB_TOKEN }}
+  

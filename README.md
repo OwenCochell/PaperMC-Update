@@ -1,53 +1,4 @@
 
-## Creepers Actual Start String:
-Python C:\Minecraft\server_update.py --user-agent "PaperUpdater/3.0.1 (github.com/creeper36)" --batch --no-backup C:\Minecraft\paper.jar
-
-# New Command Line Variables:
-Specifies a custom user agent string, see below for why you should do this and what value you should choose:
->-ua [AGENT], --user-agent [AGENT]
-
-Log-friendly filtering of output mainly used for batch files.
->-ba, --batch
-
-## User Agent
-
-According to the new [API V3 documentation](https://docs.papermc.io/misc/downloads-api),
-It is **REQUIRED** to specify a custom user agent string.
-This string must:
-
-- Clearly identify your software and version
-- Include a method of contact.
-- Not be generic
-
-Some examples:
-
-```
---user-agent "PaperUpdater/3.0.1 (johnsmith@email.com)"
--ua paperupdater-github.com/johnsmith
-```
-
-IF YOU ADD A SPACE YOU NEED TO ADD QUOTES.. IT WILL FAIL THINKING ITS THE NEXT ARGUMENT.
-
-If you fail to provide a -UA argument it will not fail but YOU NEED TO CHANGE IT TO COMPLY WITH THESE NEW API RULES.
-
-You may use the user agent option (`-ua [AGENT], --user-agent [AGENT]`) to specify this value.
-It is optional, but **HIGHLY** recommended to set this value to something custom.
-If a custom user agent is not provided, then this script will use the default value.
-
-
-## Errorlevels:  
-After paper.jar has an update it will Exit in a Normal state with Errorlevel 0.
-This can be used by batch files to trigger 'GOTO UPDATE-FOUND' in the batch script.   
-
-Current Errorlevels Supported :   
-1 - Normal Exit- No PaperMC Update   
-0 - Normal Exit- New PaperMC Was Found and Updated
-
-        PYTHON server_update.py C:\Minecraft\paper.jar
-        IF %ERRORLEVEL% EQU 1 GOTO SAMEPAPER
-        IF %ERRORLEVEL% EQU 0 GOTO NEWPAPERFOUND
-        GOTO SAMEPAPER
-
 
 # PaperMC-Update
 
@@ -222,12 +173,6 @@ Displays stats on the selected version and build:
 
 Specifies a custom user agent string, see below for why you should do this and what value you should choose:
 >-ua [AGENT], --user-agent [AGENT]
-
-Log-friendly filtering of output mainly used for batch files.
->-ba, --batch
-
-Checks GitHub for a new version of this script, and upgrades if necessary:
->-u, --upgrade
 
 
 ## Special Keywords
