@@ -1684,9 +1684,6 @@ class ServerUpdater:
 
         self.version = ver
         self.buildnum = build
-
-        return
-
         return val
 
 
