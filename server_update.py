@@ -36,13 +36,13 @@ from pathlib import Path
 A Set of tools to automate the server update process.
 """
 
-__version__ = '3.0.1'
+__version__ = '1.0.0'
 
 # These variables contain links for the script updating process.
 
-GITHUB = 'https://github.com/Owen-Cochell/PaperMC-Update'
-GITHUB_RELEASE = 'https://api.github.com/repos/Owen-Cochell/PaperMC-Update/releases/latest'
-GITHUB_RAW = 'https://raw.githubusercontent.com/Owen-Cochell/PaperMC-Update/master/server_update.py'
+GITHUB = 'https://github.com/Creeper36/PaperMC-Update'
+GITHUB_RELEASE = 'https://api.github.com/repos/Creeper36/PaperMC-Update/releases/latest'
+GITHUB_RAW = 'https://raw.githubusercontent.com/Creeper36/PaperMC-Update/master/server_update.py'
 
 
 filterArray = [
