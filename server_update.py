@@ -7,7 +7,7 @@ import sys
 if sys.version_info < (3,7,0):
 
     sys.stdout.write("\n--== [ Invalid python version! ] ==--\n")
-    sys.stdout.write("Current version: {}\n".format(version_info))
+    sys.stdout.write("Current version: {}\n".format(sys.version_info))
     sys.stdout.write("Expected version: 3.7+\n")
     sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
 
@@ -20,6 +20,7 @@ import json
 import traceback
 import argparse
 import os
+import subprocess
 
 from urllib.error import URLError
 from http.client import HTTPResponse
@@ -41,6 +42,29 @@ __version__ = '3.0.1'
 GITHUB = 'https://github.com/Owen-Cochell/PaperMC-Update'
 GITHUB_RELEASE = 'https://api.github.com/repos/Owen-Cochell/PaperMC-Update/releases/latest'
 GITHUB_RAW = 'https://raw.githubusercontent.com/Owen-Cochell/PaperMC-Update/master/server_update.py'
+
+
+filterArray = [
+    "[PaperMC", "[Handles", "[Written", "[ --== Installation", "[ --== Paper", "# Loading build", "# Removed",
+    "[ --== Checking", "|  ", "[ --== Version", "[ --== Starting", "[ --== Download", "[ --== End", "# Done",
+    "# Selecting latest", "*****", "+====", "# Temporary", "# Saved", "# Loading version"
+]
+
+
+def check_internet_connection():
+    """
+    Checks for internet connection once by pinging 8.8.8.8 .
+    If the connection fails, prints an error and exits with status code 2 .
+    """
+    result = subprocess.run(
+        ["ping", "-n", "1", "8.8.8.8"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+    if result.returncode != 0:
+        print("# ERROR: !! No Internet Connection !!")
+        sys.exit(2)
 
 
 def load_config_old(config: dict) -> Tuple[str, int]:
@@ -203,11 +227,6 @@ def upgrade_script(serv: ServerUpdater):
 
     output("# Script update complete!\n")
 
-filterArray = [
-    "[PaperMC", "[Handles", "[Written", "[ --== Installation", "[ --== Paper", "# Loading build", "# Removed",
-    "[ --== Checking", "|  ", "[ --== Version", "[ --== Starting", "[ --== Download", "[ --== End", "# Done",
-    "# Selecting latest", "*****", "+====", "# Temporary", "# Saved", "# Loading version"
-]
 
 def output(text: str):
 
@@ -288,7 +307,7 @@ def progress_bar(length: int, stepsize: int, total_steps: int, step: int, prefix
     We act as a generator, continuing to iterate and add to the bar progress
     as we download more information.
 
-    :param legnth: Length of data to download
+    :param length: Length of data to download
     :type length: int
     :param stepsize: Size of each step
     :type stepsize: int
@@ -1792,6 +1811,8 @@ class ServerUpdater:
 if __name__ == '__main__':
 
     # Ran as script
+
+    check_internet_connection()
 
     parser = argparse.ArgumentParser(description='PaperMC Server Updater.',
                                      epilog="Please check the github page for more info: "
