@@ -21,6 +21,7 @@ import traceback
 import argparse
 import os
 import subprocess
+import platform
 
 from urllib.error import URLError
 from http.client import HTTPResponse
@@ -53,11 +54,17 @@ filterArray = [
 
 def check_internet_connection():
     """
-    Checks for internet connection once by pinging 8.8.8.8 .
-    If the connection fails, prints an error and exits with status code 2 .
+    Checks for internet connection once by pinging 8.8.8.8.
+    If the connection fails, prints an error and exits with status code 2.
     """
+    # Detect OS
+    is_windows = platform.system().lower() == "windows"
+
+    # Use appropriate ping command
+    command = ["ping", "-n", "1", "8.8.8.8"] if is_windows else ["ping", "-c", "1", "8.8.8.8"]
+
     result = subprocess.run(
-        ["ping", "-n", "1", "8.8.8.8"],
+        command,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
