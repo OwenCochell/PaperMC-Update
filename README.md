@@ -1,3 +1,5 @@
+
+
 # PaperMC-Update
 
 A simple CLI script that can check, download, and install PaperMC jar files.
@@ -172,43 +174,6 @@ Displays stats on the selected version and build:
 Specifies a custom user agent string, see below for why you should do this and what value you should choose:
 >-ua [AGENT], --user-agent [AGENT]
 
-Checks GitHub for a new version of this script, and upgrades if necessary:
->-u, --upgrade
-
-## User Agent
-
-According to the new [API V3 documentation](https://docs.papermc.io/misc/downloads-api),
-it is **REQUIRED** to specify a custom user agent string.
-This string must:
-
-- Clearly identify your software or company
-- Not be generic (defaults from curl, wget, ect.)
-- Includes a contact URL or email address (homepage, bot info page, support email, etc.)
-
-Some examples:
-
-```
-mc-image-helper/1.39.11 (https://github.com/itzg/docker-minecraft-server)
-nodecraft/packifier/1.0.0 (staff@nodecraft.com)
-```
-
-These requirements were pulled directly from the documentation page linked above,
-but they may change at any time. Please check the page regularly to ensure you are in compliance!
-
-You may use the user agent option (`-ua [AGENT], --user-agent [AGENT]`) to specify this value.
-It is optional, but **HIGHLY** recommended to set this value to something custom.
-If a custom user agent is not provided, then this script will use the default value:
-
-```
-PaperMC-Update/VERSION (https://github.com/OwenCochell/PaperMC-Update)
-```
-
-(Where `VERSION` is the current version of this script)
-
-This default value may be blocked at any time at the discretion of the PaperMC team!
-Which means, if you do not specify a custom user agent, then this script may stop working!
-In addition, this value will NOT change going forward (with the exception of the `VERSION` component).
-To avoid any future problems, you should, again, use a custom user agent!
 
 ## Special Keywords
 
@@ -343,6 +308,7 @@ You can specify a directory to target instead of a file like this:
 This will automatically disable old file deletion and backup.
 The newly downloaded file will simply be moved to the target directory,
 and will not be renamed(unless otherwise instructed by the '-o' parameter).
+
 
 # Examples:
 

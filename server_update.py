@@ -7,7 +7,7 @@ import sys
 if sys.version_info < (3,7,0):
 
     sys.stdout.write("\n--== [ Invalid python version! ] ==--\n")
-    sys.stdout.write("Current version: {}\n".format(version_info))
+    sys.stdout.write("Current version: {}\n".format(sys.version_info))
     sys.stdout.write("Expected version: 3.7+\n")
     sys.stdout.write("\nPlease install the correct version of python before continuing!\n")
 
@@ -20,6 +20,8 @@ import json
 import traceback
 import argparse
 import os
+import subprocess
+import platform
 
 from urllib.error import URLError
 from http.client import HTTPResponse
@@ -34,13 +36,42 @@ from pathlib import Path
 A Set of tools to automate the server update process.
 """
 
-__version__ = '3.0.1'
+__version__ = '1.0.0'
 
 # These variables contain links for the script updating process.
 
-GITHUB = 'https://github.com/Owen-Cochell/PaperMC-Update'
-GITHUB_RELEASE = 'https://api.github.com/repos/Owen-Cochell/PaperMC-Update/releases/latest'
-GITHUB_RAW = 'https://raw.githubusercontent.com/Owen-Cochell/PaperMC-Update/master/server_update.py'
+GITHUB = 'https://github.com/Creeper36/PaperMC-Update'
+GITHUB_RELEASE = 'https://api.github.com/repos/Creeper36/PaperMC-Update/releases/latest'
+GITHUB_RAW = 'https://raw.githubusercontent.com/Creeper36/PaperMC-Update/master/server_update.py'
+
+
+filterArray = [
+    "[PaperMC", "[Handles", "[Written", "[ --== Installation", "[ --== Paper", "# Loading build", "# Removed",
+    "[ --== Checking", "|  ", "[ --== Version", "[ --== Starting", "[ --== Download", "[ --== End", "# Done",
+    "# Selecting latest", "*****", "+====", "# Temporary", "# Saved", "# Loading version"
+]
+
+
+def check_internet_connection():
+    """
+    Checks for internet connection once by pinging 8.8.8.8.
+    If the connection fails, prints an error and exits with status code 2.
+    """
+    # Detect OS
+    is_windows = platform.system().lower() == "windows"
+
+    # Use appropriate ping command
+    command = ["ping", "-n", "1", "8.8.8.8"] if is_windows else ["ping", "-c", "1", "8.8.8.8"]
+
+    result = subprocess.run(
+        command,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+    if result.returncode != 0:
+        print("# ERROR: !! No Internet Connection !!")
+        sys.exit(2)
 
 
 def load_config_old(config: dict) -> Tuple[str, int]:
@@ -211,11 +242,17 @@ def output(text: str):
     will not print content if we are in quiet mode.
     """
 
-    if not args.quiet:
+    if args.quiet:
+        return
 
-        # We are not quieted, print the content
+    if args.batch:
+        if not text.strip():
+            return
+        for pattern in filterArray:
+            if pattern in text:
+                return
 
-        print(text)
+    print(text.strip() if args.batch else text)
 
 
 def error_report(exc, net: bool=False):
@@ -277,7 +314,7 @@ def progress_bar(length: int, stepsize: int, total_steps: int, step: int, prefix
     We act as a generator, continuing to iterate and add to the bar progress
     as we download more information.
 
-    :param legnth: Length of data to download
+    :param length: Length of data to download
     :type length: int
     :param stepsize: Size of each step
     :type stepsize: int
@@ -301,13 +338,14 @@ def progress_bar(length: int, stepsize: int, total_steps: int, step: int, prefix
 
     # Rendering progress bar:
 
-    if not args.quiet:
+    if args.quiet or args.batch:
+        return
 
-        sys.stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
+    sys.stdout.write("{}[{}{}] {}/{}\r".format(prefix, prog_char*x, empty_char*(size-x),
                                                         (step*stepsize if step < total_steps - 1 else length), length))
-        sys.stdout.flush()
+    sys.stdout.flush()
 
-    if not args.quiet and step >= total_steps - 1 :
+    if step >= total_steps - 1 :
 
         sys.stdout.write("\n")
         sys.stdout.flush()
@@ -1245,7 +1283,7 @@ class ServerUpdater:
 
             return False
 
-        output("# Comparing local <> remote server versions ...")
+        output("# Comparing local <> remote versions ...")
 
         if self.version != self._select(default_version, ver, 'latest', 'version', print_output=False) and (self.version == '0' or ver[-1] != self.version):
 
@@ -1297,7 +1335,7 @@ class ServerUpdater:
 
             return True
 
-        output("# No new builds found.")
+        output("# No new build available.")
         output("\n[ --== Version check complete! ==-- ]")
 
         return False
@@ -1498,7 +1536,7 @@ class ServerUpdater:
 
                 return '', -1
 
-        output("\nYou have selected:")
+        output("\nSelection made:")
         output("   > Version: [{}]".format(ver))
         output("   > Build: [{}]".format(build))
 
@@ -1672,76 +1710,94 @@ class ServerUpdater:
 
         self.version = ver
         self.buildnum = build
+        return val
 
-        return
 
-    def _select(self, val: Any, choice: Sequence[Any], default: str, name: str, print_output: bool=True) -> Union[str, None]:
+    def _select(self, val, choice, default, name, print_output=True):
         """
-        Selects a value from the choices.
-        We support updater keywords,
-        like 'latest', 'current' and ''.
-
-        :param val: Value entered
-        :type val: Any
-        :param choice: Choices to choose from
-        :type choice: Sequence[Any]
-        :param default: Default value
-        :type default: str
-        :param name: Name of value we are choosing
-        :type name: str
-        :param print_output: Boolean determining if we output choices
-        :type print_output: bool
-        :return: Selected value, None if invalid
-        :rtype: str, None
+        Select a value from choices.
+        Special values:
+          - '', uses default
+          - -1 or 'latest', picks newest automatically
+          - 'current', uses currently installed version/build
+        Robust to string/int mismatches and list ordering.
         """
 
+        # Normalize blank -> default
         if val == '':
-
-            # User wants default value:
-
             val = default
 
-        if val == 'latest' or val == -1:
+        # Normalize numeric sentinel for latest
+        if val == -1:
+            val = 'latest'
 
-            # User wants latest
+        # Normalize strings
+        if isinstance(val, str):
+            s = val.strip().lower()
+            if s == 'latest':
+                val = 'latest'
+            elif s == 'current':
+                val = 'current'
+            else:
+                # If choices are ints and user typed digits, coerce
+                if choice and isinstance(choice[0], int) and s.isdigit():
+                    val = int(s)
 
+        # Handle “latest”
+        if val == 'latest':
+            if not choice:
+                if print_output:
+                    output(f"\n# Error: No {name}s available!")
+                return None
+
+            # If this is build selection, take the numeric max (most robust).
+            if name in ('build', 'buildnum'):
+                # Coerce to ints if needed
+                if isinstance(choice[0], str):
+                    try:
+                        nums = [int(x) for x in choice]
+                    except ValueError:
+                        # Fallback: keep original and rely on last element
+                        latest = choice[-1]
+                    else:
+                        latest = max(nums)
+                else:
+                    latest = max(choice)
+
+                if print_output:
+                    output(f"# Selecting latest {name} - [{latest}] ...")
+                return latest
+
+            # For versions, keep your existing “newest” behavior (last element).
+            latest = choice[-1]
             if print_output:
+                output(f"# Selecting latest {name} - [{latest}] ...")
+            return latest
 
-                output("# Selecting latest {} - [{}] ...".format(name, choice[-1]))
-
-            val = choice[-1]
-
-            return val
-
+        # Handle “current”
         if val == 'current':
-            
             if name == 'version':
-            
-                # User wants currently installed version:
-                
                 val = self.version
-                
-            elif name == 'build':
-                
+            elif name in ('build', 'buildnum'):
                 val = self.buildnum
 
+        # Coerce for membership checks
+        if choice:
+            if isinstance(choice[0], int) and isinstance(val, str) and val.isdigit():
+                val = int(val)
+            elif isinstance(choice[0], str) and not isinstance(val, str):
+                val = str(val)
+
+        # Validate
         if val not in choice:
-
-            # User selected invalid option
-
             if print_output:
-
-                output("\n# Error: Invalid {} selected!".format(name))
-
+                output(f"\n# Error: Invalid {name} selected!")
             return None
 
-        # Option selected is valid. Continue
-
         if print_output:
-
-            output("# Selecting {}: [{}] ...".format(name, val))
-
+            output(f"# Selecting {name}: [{val}] ...")
         return val
+
 
     def _url_report(self, point: str):
         """
@@ -1763,6 +1819,8 @@ if __name__ == '__main__':
 
     # Ran as script
 
+    check_internet_connection()
+
     parser = argparse.ArgumentParser(description='PaperMC Server Updater.',
                                      epilog="Please check the github page for more info: "
                                             "https://github.com/Owen-Cochell/PaperMC-Update.")
@@ -1775,7 +1833,7 @@ if __name__ == '__main__':
     # Server version arguments:
 
     version.add_argument('-v', '--version', help='Server version to install(Sets default value)', default='latest', type=str)
-    version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default=-1, type=str)
+    version.add_argument('-b', '--build', help='Server build to install(Sets default value)', default=-1, type=int)
     version.add_argument('-iv', help='Sets the currently installed server version, ignores config', default='0', type=str)
     version.add_argument('-ib', help='Sets the currently installed server build, ignores config', default=0, type=int)
     version.add_argument('-sv', '--server-version', help="Displays server version from configuration file and exits", action='store_true')
@@ -1805,6 +1863,7 @@ if __name__ == '__main__':
     parser.add_argument('-q', '--quiet', help="Will only output errors and interactive questions to the terminal",
                         action='store_true')
     parser.add_argument('-s', '--stats', help='Displays statistics on the selected version and build', action='store_true')
+    parser.add_argument('-ba', '--batch', help='Log-friendly output mainly for batch scripts', action='store_true')
     parser.add_argument('-V', '--script-version', help='Displays script version', version=__version__, action='version')
     parser.add_argument("-ua", "--user-agent",
                         help="User agent to utilize when making requests this should be unique and custom to you! See https://docs.papermc.io/misc/downloads-api/", type=str, default='')
@@ -1898,3 +1957,10 @@ if __name__ == '__main__':
 
         serv.get_new(default_version=args.version, default_build=args.build, backup=not (args.no_backup or args.new),
                     new=args.new, output_name=name, target_copy=args.copy_old)
+
+        sys.exit(0)
+
+    else:
+
+        sys.exit(1)
+
