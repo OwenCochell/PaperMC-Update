@@ -1,5 +1,11 @@
 # Changelog 
 
+## 3.0.2
+
+Bug Fixes:
+
+  - REALLY resolved error where oldest build is selected. We now sort to remove any ordering issues.
+
 ## 3.0.1
 
 Bug Fixes:

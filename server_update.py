@@ -34,7 +34,7 @@ from pathlib import Path
 A Set of tools to automate the server update process.
 """
 
-__version__ = '3.0.1'
+__version__ = '3.0.2'
 
 # These variables contain links for the script updating process.
 
@@ -665,9 +665,9 @@ class Update:
 
         builds: list[int] = self.get(version)['builds']
 
-        # Reverse the list
+        # We reverse the list to remove any ordering issues
 
-        builds.reverse()
+        builds.sort()
 
         # Return the build info
 
@@ -1204,7 +1204,7 @@ class ServerUpdater:
         output("\n[ --== End Paper Stats! ==-- ]\n")
         output("+==================================================+\n")
 
-    def check(self, default_version: str, default_build: int):
+    def check(self, default_version: str, default_build: int) -> bool:
         """
         Checks if a new version is available.
 
