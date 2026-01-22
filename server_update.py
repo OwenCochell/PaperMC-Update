@@ -657,15 +657,16 @@ class Update:
         # New in V3
         ##
 
-        # The build numbers are now reversed, going from newest to oldest.
+        # The build numbers seem change their ordering sometimes?
         # This script expects the build numbers to be from oldest to newest,
-        # So we will reverse this list
+        # So we will sort the list
 
         # Get the list from the API
 
         builds: list[int] = self.get(version)['builds']
 
-        # We reverse the list to remove any ordering issues
+        # We sort the build numbers in ascending order to remove any issues,
+        # internally we assume older builds go first and ascend.
 
         builds.sort()
 
